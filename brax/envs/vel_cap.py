@@ -46,7 +46,7 @@ class VelCap(env.Env):
         'ctrl_reward': zero,
         'contact_reward': zero,
         'survive_reward': zero,
-        # 'piggy_action': jp.zeros(3),
+        'piggy_action': jp.zeros(3),
         # 'player_actions': jp.zeros(3*2),
     }
     return env.State(qp, obs, reward, done, metrics)
@@ -149,7 +149,7 @@ class VelCap(env.Env):
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
         survive_reward=survive_reward,
-        # piggy_action=piggy_act,
+        piggy_action=piggy_act,
         # player_actions=player_act,
     )
 
