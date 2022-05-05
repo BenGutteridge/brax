@@ -37,6 +37,7 @@ from brax.envs import ur5e
 from brax.envs import walker2d
 from brax.envs import OLD_piggy_in_the_middle
 from brax.envs import piggy_in_the_middle
+from brax.envs import vel_cap
 from brax.envs import wrappers
 from brax.envs.env import Env, State, Wrapper
 import gym
