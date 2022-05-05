@@ -110,7 +110,7 @@ class VelCap(env.Env):
     #   `survive_reward`                    : +ve fixed reward for episode not ending
 
     # Each player move towards ball, small reward
-    scale = 5.0
+    scale = 10.0
     p1_pos_before, p1_pos_after = state.qp.pos[2,:2], qp.pos[2,:2]
     p2_pos_before, p2_pos_after = state.qp.pos[3,:2], qp.pos[3,:2]
     ball_pos_after = qp.pos[0,:2]
@@ -126,7 +126,7 @@ class VelCap(env.Env):
     p2_ball_reward *= scale
 
     # Ball move away from piggy, reward
-    scale = 5.0
+    scale = 30.0
     piggy_pos_after = qp.pos[1,:2]
     piggy_ball_dist_after = norm(ball_pos_after - piggy_pos_after)
     # +ve means piggy is further away from ball
