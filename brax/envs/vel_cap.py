@@ -65,17 +65,23 @@ class VelCap(env.Env):
     piggy_acc = 1.0 # base acceleration of 1m/s^2
     piggy_acc *= vec_piggy_ball # convert into acceleration vector
 
-    # Ensure piggy thrust doesn't cause it to exceed max velocity
-    piggy_max_vel = 100.0
-    piggy_acc_x, piggy_acc_y = piggy_acc
-    next_x_vel, next_y_vel = state.qp.vel[0,:2] + piggy_acc * self.sys.config.dt # v = v0 + a * dt
-    piggy_acc_x = jp.where(jp.abs(next_x_vel) < piggy_max_vel,  # if
-                            piggy_acc_x,                        # then
-                            jp.float32(0))                      # else
-    piggy_acc_y = jp.where(jp.abs(next_y_vel) < piggy_max_vel,  # if
-                            piggy_acc_y,                        # then
-                            jp.float32(0))                      # else
-    piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
+    # # Ensure piggy thrust doesn't cause it to exceed max velocity
+    # piggy_max_vel = 100.0
+    # piggy_acc_x, piggy_acc_y = piggy_acc
+    # next_x_vel, next_y_vel = state.qp.vel[0,:2] + piggy_acc * self.sys.config.dt # v = v0 + a * dt
+    # piggy_acc_x = jp.where(jp.abs(next_x_vel) < piggy_max_vel,  # if
+    #                         piggy_acc_x,                        # then
+    #                         jp.float32(0))                      # else
+    # piggy_acc_y = jp.where(jp.abs(next_y_vel) < piggy_max_vel,  # if
+    #                         piggy_acc_y,                        # then
+    #                         jp.float32(0))                      # else
+    # piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
+
+    # testing -- generate force F = m*(v-u)/dt
+    desied_vel = 1.0              # desired velocity of 1m/s
+    desired_vel *= vec_piggy_ball # desired velocity vector
+    piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
+
 
     # Update step 
     piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
