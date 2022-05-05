@@ -88,8 +88,10 @@ class VelCap(env.Env):
     # get force magnitude multiplier from action,
     # scale down force based on distance from ball
     max_dist = 10. # max distance from ball that can still exert force
-    p1_force_mult = jp.amax([0, action[0] * (1 - (p1_ball_dist_before/max_dist)**2)])
-    p2_force_mult = jp.amax([0, action[0] * (1 - (p2_ball_dist_before/max_dist)**2)])
+    p1_force_mult = action[0] * (1 - (p1_ball_dist_before/max_dist)**2)
+    p2_force_mult = action[1] * (1 - (p2_ball_dist_before/max_dist)**2)
+    p1_force_mult = jp.amax([0, p1_force_mult]) # don't want to exert pulling force
+    p2_force_mult = jp.amax([0, p2_force_mult])
     # get acceleration vectors
     p1_ball_acc = p1_force_mult * p1_ball_vec
     p2_ball_acc = p2_force_mult * p2_ball_vec
