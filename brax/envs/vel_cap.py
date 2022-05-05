@@ -76,16 +76,25 @@ class VelCap(env.Env):
     #                         jp.float32(0))                      # else
     # piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
 
-    # testing -- generate force F = m*(v-u)/dt
+    # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
     desired_vel = 5.0             # desired speed of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
 
+    act_is_vel = True
+    if act_is_vel:
+      # Generate force for players: F = m*(v-u)/dt
+      desired_vel = action[:2]
+      p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
+      desired_vel = action[2:]
+      p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
+    else:
+      p1_acc, p2_acc = action[:2], action[2:]
 
     # Update step 
     piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
-    player_act = jp.concatenate([action[:2], jp.zeros(1), 
-                                  action[2:], jp.zeros(1)])
+    player_act = jp.concatenate([p1_acc, jp.zeros(1), 
+                                  p2_acc, jp.zeros(1)])
     act = jp.concatenate([piggy_act, player_act])
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
