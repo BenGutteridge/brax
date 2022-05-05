@@ -46,6 +46,8 @@ class VelCap(env.Env):
         'ctrl_reward': zero,
         'contact_reward': zero,
         'survive_reward': zero,
+        'piggy_action': jp.zeros(3),
+        'player_actions': jp.zeros(3*2),
         # 'action': jp.zeros(self.action_size),
     }
     return env.State(qp, obs, reward, done, metrics)
@@ -76,9 +78,10 @@ class VelCap(env.Env):
     piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
 
     # Update step 
-    act = jp.concatenate([piggy_acc, jp.zeros(1),
-                          action[:2], jp.zeros(1), 
-                          action[2:], jp.zeros(1)])
+    piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
+    player_act = jp.concatenate([action[:2], jp.zeros(1), 
+                                  action[2:], jp.zeros(1)])
+    act = jp.concatenate([piggy_act, player_act])
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
 
@@ -141,6 +144,8 @@ class VelCap(env.Env):
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
         survive_reward=survive_reward,
+        piggy_action=piggy_act,
+        player_actions=player_act,
         # action=action
     )
 
