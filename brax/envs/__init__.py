@@ -39,8 +39,8 @@ from brax.envs import act_sphere
 from brax.envs import sphere_fetch
 from brax.envs import sphere_push
 from brax.envs import sphere_chase
+from brax.envs import OLD_piggy_in_the_middle
 from brax.envs import piggy_in_the_middle
-from brax.envs import thruster_check
 from brax.envs import wrappers
 from brax.envs.env import Env, State, Wrapper
 import gym
@@ -67,8 +67,8 @@ _envs = {
     'sphere_fetch': sphere_fetch.SphereFetch,
     'sphere_push': sphere_push.SpherePush,
     'sphere_chase': sphere_chase.SphereChase,
+    'OLD_piggy_in_the_middle': OLD_piggy_in_the_middle.PITM,
     'piggy_in_the_middle': piggy_in_the_middle.PITM,
-    'thruster_check': thruster_check.ThrusterCheck,
 }
 
 
