@@ -62,7 +62,7 @@ class VelCap(env.Env):
     # check that this won't make velocity go too high
     vec_piggy_ball /= piggy_ball_dist_before # normalize
     # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
-    desired_vel = 5.0             # desired speed of 1m/s
+    desired_vel = 2.0             # desired speed of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
     act_is_vel = True
