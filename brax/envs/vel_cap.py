@@ -78,10 +78,25 @@ class VelCap(env.Env):
       p1_acc, p2_acc = action[:2], action[2:]
 
     # Let players apply thrust to the ball
-    ### 
+    p1_pos_before, p2_pos_before = state.qp.pos[2,:2], state.qp.pos[3,:2]
+    p1_ball_vec = ball_pos_before - p1_pos_before
+    p2_ball_vec = ball_pos_before - p2_pos_before
+    p1_ball_dist_before = norm(p1_ball_vec)
+    p2_ball_dist_before = norm(p2_ball_vec)
+    p1_ball_vec /= p1_ball_dist_before # magnitude 1 vectors for exerting thrust on ball
+    p2_ball_vec /= p2_ball_dist_before
+    # get force magnitude multiplier from action,
+    # scale down force based on distance from ball
+    max_dist = 10. # max distance from ball that can still exert force
+    p1_force_mult = max(0, action[0] * (1 - (p1_ball_dist_before/max_dist)**2))
+    p2_force_mult = max(0, action[1] * (1 - (p2_ball_dist_before/max_dist)**2))
+    # get acceleration vectors
+    p1_ball_acc = p1_force_mult * p1_ball_vec
+    p2_ball_acc = p2_force_mult * p2_ball_vec
+    ball_acc = p1_ball_acc + p2_ball_acc
 
     # Update step 
-    ball_act = jp.zeros(3) # fill in later
+    ball_act = jp.concatenate([ball_acc, jp.zeros(1)])
     piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
     player_act = jp.concatenate([p1_acc, jp.zeros(1), 
                                   p2_acc, jp.zeros(1)])
@@ -156,7 +171,7 @@ class VelCap(env.Env):
 
   @property
   def action_size(self):
-    return 4
+    return 6 # 2 each for each player to exert on themselves, 
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
