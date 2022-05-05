@@ -62,7 +62,7 @@ class VelCap(env.Env):
     # check that this won't make velocity go too high
     vec_piggy_ball /= piggy_ball_dist_before # normalize
     # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
-    desired_vel = 2.0             # desired speed of 1m/s
+    desired_vel = 1.0             # desired speed of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
     act_is_vel = True
@@ -90,8 +90,8 @@ class VelCap(env.Env):
     max_dist = 10. # max distance from ball that can still exert force
     p1_force_mult = action[0] * (1 - (p1_ball_dist_before/max_dist)**2)
     p2_force_mult = action[1] * (1 - (p2_ball_dist_before/max_dist)**2)
-    p1_force_mult = (p1_force_mult + abs(p1_force_mult)) / 2
-    p2_force_mult = (p2_force_mult + abs(p2_force_mult)) / 2 # clip -ve to zero
+    p1_force_mult = jp.clip(p1_force_mult, 0, jp.inf)
+    p2_force_mult = jp.clip(p2_force_mult, 0, jp.inf)
     # get acceleration vectors
     p1_ball_acc = p1_force_mult * p1_ball_vec
     p2_ball_acc = p2_force_mult * p2_ball_vec
