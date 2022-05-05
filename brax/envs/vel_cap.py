@@ -91,11 +91,15 @@ class VelCap(env.Env):
     else:
       p1_acc, p2_acc = action[:2], action[2:]
 
+    # Let players apply thrust to the ball
+    ### 
+
     # Update step 
+    ball_act = jp.zeros(3) # fill in later
     piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
     player_act = jp.concatenate([p1_acc, jp.zeros(1), 
                                   p2_acc, jp.zeros(1)])
-    act = jp.concatenate([piggy_act, player_act])
+    act = jp.concatenate([ball_act, piggy_act, player_act])
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
 
@@ -331,6 +335,14 @@ angular_damping: -0.05
 dt: 0.05000000074505806
 substeps: 20
 frozen {
+}
+
+forces {
+  name: "ball_thrust"
+  body: "ball"
+  strength: 1.0
+  thruster {
+  }
 }
 
 forces {
