@@ -78,7 +78,7 @@ class VelCap(env.Env):
     # piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
 
     # testing -- generate force F = m*(v-u)/dt
-    desied_vel = 1.0              # desired velocity of 1m/s
+    desired_vel = 1.0              # desired velocity of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
 
