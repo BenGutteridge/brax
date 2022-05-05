@@ -61,34 +61,20 @@ class VelCap(env.Env):
     piggy_ball_dist_before = norm(vec_piggy_ball)
     # check that this won't make velocity go too high
     vec_piggy_ball /= piggy_ball_dist_before # normalize
-    piggy_acc = 1.0 # base acceleration of 1m/s^2
-    piggy_acc *= vec_piggy_ball # convert into acceleration vector
-
-    # # Ensure piggy thrust doesn't cause it to exceed max velocity
-    # piggy_max_vel = 100.0
-    # piggy_acc_x, piggy_acc_y = piggy_acc
-    # next_x_vel, next_y_vel = state.qp.vel[0,:2] + piggy_acc * self.sys.config.dt # v = v0 + a * dt
-    # piggy_acc_x = jp.where(jp.abs(next_x_vel) < piggy_max_vel,  # if
-    #                         piggy_acc_x,                        # then
-    #                         jp.float32(0))                      # else
-    # piggy_acc_y = jp.where(jp.abs(next_y_vel) < piggy_max_vel,  # if
-    #                         piggy_acc_y,                        # then
-    #                         jp.float32(0))                      # else
-    # piggy_acc = jp.array([piggy_acc_x, piggy_acc_y])
-
     # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
     desired_vel = 5.0             # desired speed of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
-
     act_is_vel = True
+
+    # Generating player actions
     if act_is_vel:
       # Generate force for players: F = m*(v-u)/dt
       desired_vel = action[:2]
       p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
       desired_vel = action[2:]
       p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
-    else:
+    else: # use actions as forces directly
       p1_acc, p2_acc = action[:2], action[2:]
 
     # Let players apply thrust to the ball
