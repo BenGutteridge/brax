@@ -35,10 +35,6 @@ from brax.envs import reacherangle
 from brax.envs import swimmer
 from brax.envs import ur5e
 from brax.envs import walker2d
-from brax.envs import act_sphere
-from brax.envs import sphere_fetch
-from brax.envs import sphere_push
-from brax.envs import sphere_chase
 from brax.envs import OLD_piggy_in_the_middle
 from brax.envs import piggy_in_the_middle
 from brax.envs import wrappers
