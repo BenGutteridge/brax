@@ -63,12 +63,9 @@ _envs = {
     'swimmer': swimmer.Swimmer,
     'ur5e': ur5e.Ur5e,
     'walker2d': walker2d.Walker2d,
-    'act_sphere': act_sphere.ActSphere,
-    'sphere_fetch': sphere_fetch.SphereFetch,
-    'sphere_push': sphere_push.SpherePush,
-    'sphere_chase': sphere_chase.SphereChase,
     'OLD_piggy_in_the_middle': OLD_piggy_in_the_middle.PITM,
     'piggy_in_the_middle': piggy_in_the_middle.PITM,
+    'vel_cap': vel_cap.VelCap,
 }
 
 
