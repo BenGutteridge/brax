@@ -148,10 +148,10 @@ class EvalWrapper(brax_env.Wrapper):
         lambda a, b: a + b, state_metrics.current_episode_metrics,
         nstate.metrics)
     completed_episodes = state_metrics.completed_episodes + jp.sum(nstate.done)
-    completed_episodes_metrics = jax.tree_multimap(
+    completed_episodes_metrics = jax.tree_map( # jax.tree_multimap(
         lambda a, b: a + jp.sum(b * nstate.done),
         state_metrics.completed_episodes_metrics, current_episode_metrics)
-    current_episode_metrics = jax.tree_multimap(
+    current_episode_metrics = jax.tree_map( # jax.tree_multimap(
         lambda a, b: a * (1 - nstate.done) + b * nstate.done,
         current_episode_metrics, nstate.metrics)
 
