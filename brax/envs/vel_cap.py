@@ -70,12 +70,12 @@ class VelCap(env.Env):
     # Generating player actions
     if act_is_vel:
       # Generate force for players: F = m*(v-u)/dt
-      desired_vel = action[:2]
+      desired_vel = action[2:4]
       p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
-      desired_vel = action[2:]
+      desired_vel = action[4:]
       p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
     else: # use actions as forces directly
-      p1_acc, p2_acc = action[:2], action[2:]
+      p1_acc, p2_acc = action[2:4], action[4:]
 
     # Let players apply thrust to the ball
     p1_pos_before, p2_pos_before = state.qp.pos[2,:2], state.qp.pos[3,:2]
@@ -116,12 +116,9 @@ class VelCap(env.Env):
 
     # Each player move towards ball, small reward
     scale = 10.0
-    p1_pos_before, p1_pos_after = state.qp.pos[2,:2], qp.pos[2,:2]
-    p2_pos_before, p2_pos_after = state.qp.pos[3,:2], qp.pos[3,:2]
+    p1_pos_after, p2_pos_after = qp.pos[2,:2], qp.pos[3,:2]
     ball_pos_after = qp.pos[0,:2]
-    p1_ball_dist_before = norm(ball_pos_before - p1_pos_before)
     p1_ball_dist_after = norm(ball_pos_after - p1_pos_after)
-    p2_ball_dist_before = norm(ball_pos_before - p2_pos_before)
     p2_ball_dist_after = norm(ball_pos_after - p2_pos_after)
     # +ve change, towards ball
     p1_ball_dist_change = (p1_ball_dist_before - p1_ball_dist_after) / self.sys.config.dt
@@ -171,7 +168,7 @@ class VelCap(env.Env):
 
   @property
   def action_size(self):
-    return 6 # 2 each for each player to exert on themselves, 
+    return 6 # 2 each for each player to exert on themselves, 1 per player to exert on ball
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
