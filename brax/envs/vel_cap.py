@@ -62,7 +62,7 @@ class VelCap(env.Env):
     # check that this won't make velocity go too high
     vec_piggy_ball /= piggy_ball_dist_before # normalize
     # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
-    desired_vel = 1.0             # desired speed of 1m/s
+    desired_vel = 2.0             # desired speed
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
 
@@ -98,6 +98,12 @@ class VelCap(env.Env):
       ball_acc = p1_ball_acc + p2_ball_acc
     else:
       ball_acc = jp.zeros(2)
+    # ball drag
+    visc = 1.81e-5 # viscosity of air
+    ball_r = self.sys.config.bodies[0].colliders[0].capsule.radius
+    ball_drag = 6 * jp.pi * ball_r * visc * state.qp.vel[0,:2]
+    ball_acc -= ball_drag
+
 
     # Update step 
     ball_act = jp.concatenate([ball_acc, jp.zeros(1)])
