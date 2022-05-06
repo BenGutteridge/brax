@@ -89,11 +89,9 @@ class VelCap(env.Env):
     # scale down force based on distance from ball
     ball_thrusters = True
     if ball_thrusters:
-      max_dist = 3. # max distance from ball that can still exert force
-      p1_force_mult = action[0] #* (1 - (p1_ball_dist_before/max_dist))
-      p2_force_mult = action[1] #* (1 - (p2_ball_dist_before/max_dist)) # linear scale
-      p1_force_mult = jp.clip(p1_force_mult, 0, jp.inf)
-      p2_force_mult = jp.clip(p2_force_mult, 0, jp.inf)
+      # max_dist = 3. # max distance from ball that can still exert force
+      p1_force_mult = (action[0]/p1_ball_dist_before)**2 # inverse sq dropoff
+      p2_force_mult = (action[1]/p2_ball_dist_before)**2
       # get acceleration vectors
       p1_ball_acc = p1_force_mult * p1_ball_vec
       p2_ball_acc = p2_force_mult * p2_ball_vec
