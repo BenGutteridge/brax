@@ -65,9 +65,9 @@ class VelCap(env.Env):
     desired_vel = 1.0             # desired speed of 1m/s
     desired_vel *= vec_piggy_ball # desired velocity vector
     piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
-    act_is_vel = True
 
     # Generating player actions
+    act_is_vel = True
     if act_is_vel:
       # Generate force for players: F = m*(v-u)/dt
       desired_vel = action[2:4]
@@ -87,15 +87,19 @@ class VelCap(env.Env):
     p2_ball_vec /= p2_ball_dist_before
     # get force magnitude multiplier from action,
     # scale down force based on distance from ball
-    max_dist = 10. # max distance from ball that can still exert force
-    p1_force_mult = action[0] * (1 - (p1_ball_dist_before/max_dist)**2)
-    p2_force_mult = action[1] * (1 - (p2_ball_dist_before/max_dist)**2)
-    # p1_force_mult = jp.clip(p1_force_mult, 0, jp.inf)
-    # p2_force_mult = jp.clip(p2_force_mult, 0, jp.inf)
-    # get acceleration vectors
-    p1_ball_acc = p1_force_mult * p1_ball_vec
-    p2_ball_acc = p2_force_mult * p2_ball_vec
-    ball_acc = p1_ball_acc + p2_ball_acc
+    ball_thrusters = False
+    if ball_thrusters:
+      max_dist = 10. # max distance from ball that can still exert force
+      p1_force_mult = action[0] * (1 - (p1_ball_dist_before/max_dist)**2)
+      p2_force_mult = action[1] * (1 - (p2_ball_dist_before/max_dist)**2)
+      # p1_force_mult = jp.clip(p1_force_mult, 0, jp.inf)
+      # p2_force_mult = jp.clip(p2_force_mult, 0, jp.inf)
+      # get acceleration vectors
+      p1_ball_acc = p1_force_mult * p1_ball_vec
+      p2_ball_acc = p2_force_mult * p2_ball_vec
+      ball_acc = p1_ball_acc + p2_ball_acc
+    else:
+      ball_acc = jp.zeros(2)
 
     # Update step 
     ball_act = jp.concatenate([ball_acc, jp.zeros(1)])
