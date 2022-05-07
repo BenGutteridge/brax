@@ -21,7 +21,9 @@ from brax.jumpy import safe_norm as norm
 
 
 class PITM(env.Env):
-  """"""
+  """
+  Experimenting with an env that has high accelerations but also speed caps.
+  """
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
@@ -44,7 +46,8 @@ class PITM(env.Env):
         'ctrl_reward': zero,
         'contact_reward': zero,
         'survive_reward': zero,
-        # 'action': jp.zeros(self.action_size),
+        # 'piggy_action': jp.zeros(3),
+        # 'player_actions': jp.zeros(3*2),
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -58,25 +61,56 @@ class PITM(env.Env):
     piggy_ball_dist_before = norm(vec_piggy_ball)
     # check that this won't make velocity go too high
     vec_piggy_ball /= piggy_ball_dist_before # normalize
-    piggy_acc = 1.0 # base acceleration of 1m/s^2
-    piggy_acc *= vec_piggy_ball # convert into acceleration vector
-    piggy_acc_x, piggy_acc_y = piggy_acc
+    # Generate force for piggy: F = m*(v-u)/dt, where v is desired_vel, direction -> ball.
+    desired_vel = 2.0             # desired speed
+    desired_vel *= vec_piggy_ball # desired velocity vector
+    piggy_acc = (desired_vel - state.qp.vel[1,:2]) / self.sys.config.dt # acceleration vector
 
-    # # Ensure piggy thrust doesn't cause it to exceed max velocity
-    # piggy_max_vel = 3.0
-    # next_x_vel, next_y_vel = state.qp.vel[0,:2] + piggy_acc * self.sys.config.dt # v = v0 + a * dt
-    # piggy_acc_x = jp.where(jp.abs(next_x_vel) < piggy_max_vel,  # if
-    #                         piggy_acc_x,                        # then
-    #                         jp.float32(0))                      # else
-    # piggy_acc_y = jp.where(jp.abs(next_y_vel) < piggy_max_vel,  # if
-    #                         piggy_acc_y,                        # then
-    #                         jp.float32(0))                      # else
+    # Generating player actions
+    act_is_vel = True
+    if act_is_vel:
+      # Generate force for players: F = m*(v-u)/dt
+      desired_vel = action[2:4]
+      p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
+      desired_vel = action[4:]
+      p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
+    else: # use actions as forces directly
+      p1_acc, p2_acc = action[2:4], action[4:]
+
+    # Let players apply thrust to the ball
+    p1_pos_before, p2_pos_before = state.qp.pos[2,:2], state.qp.pos[3,:2]
+    p1_ball_vec = ball_pos_before - p1_pos_before
+    p2_ball_vec = ball_pos_before - p2_pos_before
+    p1_ball_dist_before = norm(p1_ball_vec)
+    p2_ball_dist_before = norm(p2_ball_vec)
+    p1_ball_vec /= p1_ball_dist_before # magnitude 1 vectors for exerting thrust on ball
+    p2_ball_vec /= p2_ball_dist_before
+    # get force magnitude multiplier from action,
+    # scale down force based on distance from ball
+    ball_thrusters = True
+    if ball_thrusters:
+      # max_dist = 3. # max distance from ball that can still exert force
+      p1_force_mult = (action[0]/p1_ball_dist_before)**2 # inverse sq dropoff
+      p2_force_mult = (action[1]/p2_ball_dist_before)**2
+      # get acceleration vectors
+      p1_ball_acc = p1_force_mult * p1_ball_vec
+      p2_ball_acc = p2_force_mult * p2_ball_vec
+      ball_acc = p1_ball_acc + p2_ball_acc
+    else:
+      ball_acc = jp.zeros(2)
+    # ball drag (is this basicsl negigible?)
+    visc = 1.81e-5 # viscosity of air
+    ball_r = self.sys.config.bodies[0].colliders[0].capsule.radius
+    ball_drag = 6 * jp.pi * ball_r * visc * state.qp.vel[0,:2]
+    ball_acc -= ball_drag
+
 
     # Update step 
-    act = jp.concatenate([piggy_acc, jp.zeros(1),
-                          # jp.array([piggy_acc_x, piggy_acc_y, 0.]), 
-                          action[:2], jp.zeros(1), 
-                          action[2:], jp.zeros(1)])
+    ball_act = jp.concatenate([ball_acc, jp.zeros(1)])
+    piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
+    player_act = jp.concatenate([p1_acc, jp.zeros(1), 
+                                  p2_acc, jp.zeros(1)])
+    act = jp.concatenate([ball_act, piggy_act, player_act])
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
 
@@ -91,13 +125,10 @@ class PITM(env.Env):
     #   `survive_reward`                    : +ve fixed reward for episode not ending
 
     # Each player move towards ball, small reward
-    scale = 5.0
-    p1_pos_before, p1_pos_after = state.qp.pos[2,:2], qp.pos[2,:2]
-    p2_pos_before, p2_pos_after = state.qp.pos[3,:2], qp.pos[3,:2]
+    scale = 10.0
+    p1_pos_after, p2_pos_after = qp.pos[2,:2], qp.pos[3,:2]
     ball_pos_after = qp.pos[0,:2]
-    p1_ball_dist_before = norm(ball_pos_before - p1_pos_before)
     p1_ball_dist_after = norm(ball_pos_after - p1_pos_after)
-    p2_ball_dist_before = norm(ball_pos_before - p2_pos_before)
     p2_ball_dist_after = norm(ball_pos_after - p2_pos_after)
     # +ve change, towards ball
     p1_ball_dist_change = (p1_ball_dist_before - p1_ball_dist_after) / self.sys.config.dt
@@ -107,7 +138,7 @@ class PITM(env.Env):
     p2_ball_reward *= scale
 
     # Ball move away from piggy, reward
-    scale = 5.0
+    scale = 30.0
     piggy_pos_after = qp.pos[1,:2]
     piggy_ball_dist_after = norm(ball_pos_after - piggy_pos_after)
     # +ve means piggy is further away from ball
@@ -116,7 +147,7 @@ class PITM(env.Env):
     
     # Piggy reach ball, big cost, end episode
     scale = 1000.
-    eps = 1.05 # minimum distance between ball and piggy centres
+    eps = 1.21 # minimum distance between ball and piggy centres (~(1+root2)/2)
     piggy_touch_ball_cost = (piggy_ball_dist_after < eps) * scale
     done = jp.where(piggy_ball_dist_after < eps, jp.float32(1), jp.float32(0)) # if, then, else
 
@@ -139,14 +170,15 @@ class PITM(env.Env):
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
         survive_reward=survive_reward,
-        # action=action
+        # piggy_action=piggy_act,
+        # player_actions=player_act,
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
 
   @property
   def action_size(self):
-    return 4
+    return 6 # 2 each for each player to exert on themselves, 1 per player to exert on ball
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
@@ -307,10 +339,18 @@ friction: 0.1
 gravity {
   z: -9.800000190734863
 }
-angular_damping: -0.05
+angular_damping: -0.20
 dt: 0.05000000074505806
 substeps: 20
 frozen {
+}
+
+forces {
+  name: "ball_thrust"
+  body: "ball"
+  strength: 1.0
+  thruster {
+  }
 }
 
 forces {
