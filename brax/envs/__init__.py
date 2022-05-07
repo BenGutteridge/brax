@@ -35,12 +35,9 @@ from brax.envs import reacherangle
 from brax.envs import swimmer
 from brax.envs import ur5e
 from brax.envs import walker2d
-from brax.envs import act_sphere
-from brax.envs import sphere_fetch
-from brax.envs import sphere_push
-from brax.envs import sphere_chase
 from brax.envs import OLD_piggy_in_the_middle
 from brax.envs import piggy_in_the_middle
+from brax.envs import vel_cap
 from brax.envs import wrappers
 from brax.envs.env import Env, State, Wrapper
 import gym
@@ -63,12 +60,9 @@ _envs = {
     'swimmer': swimmer.Swimmer,
     'ur5e': ur5e.Ur5e,
     'walker2d': walker2d.Walker2d,
-    'act_sphere': act_sphere.ActSphere,
-    'sphere_fetch': sphere_fetch.SphereFetch,
-    'sphere_push': sphere_push.SpherePush,
-    'sphere_chase': sphere_chase.SphereChase,
     'OLD_piggy_in_the_middle': OLD_piggy_in_the_middle.PITM,
     'piggy_in_the_middle': piggy_in_the_middle.PITM,
+    'vel_cap': vel_cap.VelCap,
 }
 
 
