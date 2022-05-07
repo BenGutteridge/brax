@@ -98,7 +98,7 @@ class VelCap(env.Env):
       ball_acc = p1_ball_acc + p2_ball_acc
     else:
       ball_acc = jp.zeros(2)
-    # ball drag
+    # ball drag (is this basicsl negigible?)
     visc = 1.81e-5 # viscosity of air
     ball_r = self.sys.config.bodies[0].colliders[0].capsule.radius
     ball_drag = 6 * jp.pi * ball_r * visc * state.qp.vel[0,:2]
