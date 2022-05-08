@@ -35,7 +35,7 @@ def my_rollout_env(
     tmp_key, rng = jax.random.split(rng)
     act_1 = jit_inference_fn(params_1, state.obs, tmp_key)
     act_2 = jit_inference_fn(params_2, state.obs, tmp_key)
-    act = jp.concatenate()[act_1[:len(act_1)//2], act_2[len(act_2)//2:]]
+    act = jp.concatenate([act_1[:len(act_1)//2], act_2[len(act_2)//2:]])
     state = jit_env_step(state, act, *step_args)
   states.append(state)
   return env, states
