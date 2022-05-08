@@ -28,7 +28,7 @@ def my_rollout_env(
   jit_env_reset = jax.jit(env.reset)
   jit_env_step = jax.jit(getattr(env, step_fn_name))
   jit_inference_fn = jax.jit(inference_fn)
-  states = []
+  states, acts = [], []
   state = jit_env_reset(reset_key, *reset_args)
   while not jnp.all(state.done):
     states.append(state)
@@ -36,9 +36,10 @@ def my_rollout_env(
     act_1 = jit_inference_fn(params_1, state.obs, tmp_key)
     act_2 = jit_inference_fn(params_2, state.obs, tmp_key)
     act = jp.concatenate([act_1[:len(act_1)//2], act_2[len(act_2)//2:]])
+    acts.append(act)
     state = jit_env_step(state, act, *step_args)
   states.append(state)
-  return env, states
+  return env, states, acts
 
 
 def my_visualize_env(batch_size: int = 0,
@@ -47,7 +48,7 @@ def my_visualize_env(batch_size: int = 0,
                   verbose: bool = False,
                   **kwargs):
   """Visualize env."""
-  env, states = my_rollout_env(batch_size=batch_size, **kwargs)
+  env, states, acts = my_rollout_env(batch_size=batch_size, **kwargs)
   if verbose:
     print(f'Collected {max(1, batch_size)} trajs of T={len(states)}')
 
@@ -73,4 +74,4 @@ def my_visualize_env(batch_size: int = 0,
       if verbose:
         print(f'Saved {filename}')
 
-  return env, states
+  return env, states, acts
