@@ -6,9 +6,10 @@ from brax.experimental.braxlines.training.env import wrap
 from brax.io import html
 import jax
 from jax import numpy as jnp
+from brax import jumpy as jp
 
 def my_rollout_env(
-    params: Dict[str, Dict[str, jnp.ndarray]],
+    params, # : Dict[str, Dict[str, jnp.ndarray]],
     env_fn,
     inference_fn,
     batch_size: int = 0,
@@ -18,6 +19,7 @@ def my_rollout_env(
     step_fn_name: str = 'step',
 ):
   """Visualize environment."""
+  params_1, params_2 = params # extract from list
   rng = jax.random.PRNGKey(seed=seed)
   rng, reset_key = jax.random.split(rng)
   env = env_fn(batch_size=batch_size)
@@ -31,7 +33,9 @@ def my_rollout_env(
   while not jnp.all(state.done):
     states.append(state)
     tmp_key, rng = jax.random.split(rng)
-    act = jit_inference_fn(params, state.obs, tmp_key)
+    act_1 = jit_inference_fn(params_1, state.obs, tmp_key)
+    act_2 = jit_inference_fn(params_2, state.obs, tmp_key)
+    act = jp.concatenate()[act_1[:len(act_1)//2], act_2[len(act_2)//2:]]
     state = jit_env_step(state, act, *step_args)
   states.append(state)
   return env, states
