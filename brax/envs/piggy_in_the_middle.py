@@ -90,15 +90,15 @@ class PITM(env.Env):
     ball_thrusters = True
     if ball_thrusters:
       # max_dist = 3. # max distance from ball that can still exert force
-      p1_force_mult = (action[0]/p1_ball_dist_before)**2 # inverse sq dropoff
-      p2_force_mult = (action[1]/p2_ball_dist_before)**2
+      p1_force_mult = 10*(action[0]/p1_ball_dist_before)**2 # inverse sq dropoff
+      p2_force_mult = 10*(action[1]/p2_ball_dist_before)**2
       # get acceleration vectors
       p1_ball_acc = p1_force_mult * p1_ball_vec
       p2_ball_acc = p2_force_mult * p2_ball_vec
       ball_acc = p1_ball_acc + p2_ball_acc
     else:
       ball_acc = jp.zeros(2)
-    # ball drag (is this basicsl negigible?)
+    # ball drag (is this basically negigible?)
     visc = 1.81e-5 # viscosity of air
     ball_r = self.sys.config.bodies[0].colliders[0].capsule.radius
     ball_drag = 6 * jp.pi * ball_r * visc * state.qp.vel[0,:2]
