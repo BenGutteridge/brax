@@ -81,11 +81,11 @@ class PITM(env.Env):
     act_is_vel = True
     if act_is_vel:
       # Generate force for players: F = m*(v-u)/dt
-      desired_vel = action[:2]
+      desired_vel = 10*action[:2]
       p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
-      desired_vel = action[2:4]
+      desired_vel = 10*action[2:4]
       p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
-      desired_vel = action[4:6]
+      desired_vel = 10*action[4:6]
       p3_acc = (desired_vel - state.qp.vel[4,:2]) / self.sys.config.dt
     else: # use actions as forces directly
       p1_acc, p2_acc, p3_acc = action[:2], action[2:4], action[4:6]
@@ -149,7 +149,7 @@ class PITM(env.Env):
     #   `survive_reward`                    : +ve fixed reward for episode not ending
 
     # Each player move towards ball, small reward
-    scale = 10.0
+    scale = 1.0
     ball_pos_after = qp.pos[0,:2]
     p1_pos_after = qp.pos[2,:2]
     p2_pos_after = qp.pos[3,:2]
