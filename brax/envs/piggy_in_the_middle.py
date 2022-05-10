@@ -53,6 +53,7 @@ class PITM(env.Env):
         'p2_ball_reward': zero,
         'p3_ball_reward': zero,
         'piggy_ball_reward': zero,
+        'piggy_ball_static_reward': zero,
         'piggy_touch_ball_reward': zero,
         'ctrl_reward': zero,
         'contact_reward': zero,
@@ -167,12 +168,16 @@ class PITM(env.Env):
     p3_ball_reward *= scale
 
     # Ball move away from piggy, reward
-    scale = 30.0
+    scale = 20.0
     piggy_pos_after = qp.pos[1,:2]
     piggy_ball_dist_after = norm(ball_pos_after - piggy_pos_after)
     # +ve means piggy is further away from ball
     piggy_ball_dist_change = (piggy_ball_dist_after - piggy_ball_dist_before) / self.sys.config.dt
     piggy_ball_reward = piggy_ball_dist_change * scale
+
+    # Ball dist from piggy reward (not change)
+    scale = 1.0
+    piggy_ball_static_reward = piggy_ball_dist_after * scale
     
     # Piggy reach ball, big cost, end episode
     scale = 1000.
@@ -196,6 +201,7 @@ class PITM(env.Env):
         p2_ball_reward=p2_ball_reward,
         p3_ball_reward=p3_ball_reward,
         piggy_ball_reward=piggy_ball_reward,
+        piggy_ball_static_reward_cost=piggy_ball_static_reward,
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
