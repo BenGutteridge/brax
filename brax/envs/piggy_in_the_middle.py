@@ -132,7 +132,8 @@ class PITM(env.Env):
     ball_act = jp.concatenate([ball_acc, jp.zeros(1)])
     piggy_act = jp.concatenate([piggy_acc, jp.zeros(1)])
     player_act = jp.concatenate([p1_acc, jp.zeros(1), 
-                                  p2_acc, jp.zeros(1)])
+                                  p2_acc, jp.zeros(1), 
+                                  p3_acc, jp.zeros(1)])
     act = jp.concatenate([ball_act, piggy_act, player_act])
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
