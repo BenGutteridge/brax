@@ -32,15 +32,17 @@ class PITM(env.Env):
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
     qp = self.sys.default_qp()
-    qp.pos[1,0] = 20 # move piggy init pos
-    qp.pos[2,1] = 3 # move p1 init pos
-    qp.pos[3,1] = -3 # move p2 init pos
+    qp.pos[1,0] = 20                  # move piggy init pos
+    qp.pos[2,1] = 3                   # move p1 init pos
+    qp.pos[3,1] = -3                  # move p2 init pos
+    qp.pos[4,:2] = jp.array([-3, 0])  # move p3 init pos
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
     reward, done, zero = jp.zeros(3)
     metrics = {
         'p1_ball_reward': zero,
         'p2_ball_reward': zero,
+        'p3_ball_reward': zero,
         'piggy_ball_reward': zero,
         'piggy_touch_ball_reward': zero,
         'ctrl_reward': zero,
@@ -70,32 +72,44 @@ class PITM(env.Env):
     act_is_vel = True
     if act_is_vel:
       # Generate force for players: F = m*(v-u)/dt
-      desired_vel = action[2:4]
+      desired_vel = action[:2]
       p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
-      desired_vel = action[4:]
+      desired_vel = action[2:4]
       p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
+      desired_vel = action[4:6]
+      p3_acc = (desired_vel - state.qp.vel[4,:2]) / self.sys.config.dt
     else: # use actions as forces directly
-      p1_acc, p2_acc = action[2:4], action[4:]
+      p1_acc, p2_acc, p3_acc = action[:2], action[2:4], action[4:6]
 
     # Let players apply thrust to the ball
-    p1_pos_before, p2_pos_before = state.qp.pos[2,:2], state.qp.pos[3,:2]
+    # p1
+    p1_pos_before = state.qp.pos[2,:2]
     p1_ball_vec = ball_pos_before - p1_pos_before
-    p2_ball_vec = ball_pos_before - p2_pos_before
     p1_ball_dist_before = norm(p1_ball_vec)
-    p2_ball_dist_before = norm(p2_ball_vec)
     p1_ball_vec /= p1_ball_dist_before # magnitude 1 vectors for exerting thrust on ball
+    # p2
+    p2_pos_before = state.qp.pos[3,:2]
+    p2_ball_vec = ball_pos_before - p2_pos_before
+    p2_ball_dist_before = norm(p2_ball_vec)
     p2_ball_vec /= p2_ball_dist_before
+    # p3
+    p3_pos_before = state.qp.pos[4,:2]
+    p3_ball_vec = ball_pos_before - p3_pos_before
+    p3_ball_dist_before = norm(p3_ball_vec)
+    p3_ball_vec /= norm(p3_ball_vec)
     # get force magnitude multiplier from action,
     # scale down force based on distance from ball
     ball_thrusters = True
     if ball_thrusters:
       # max_dist = 3. # max distance from ball that can still exert force
-      p1_force_mult = 10*(action[0]/p1_ball_dist_before)**2 # inverse sq dropoff
-      p2_force_mult = 10*(action[1]/p2_ball_dist_before)**2
+      p1_force_mult = 10*(action[-1]/p1_ball_dist_before)**2 # inverse sq dropoff
+      p2_force_mult = 10*(action[-2]/p2_ball_dist_before)**2
+      p3_force_mult = 10*(action[-3]/p3_ball_dist_before)**2
       # get acceleration vectors
       p1_ball_acc = p1_force_mult * p1_ball_vec
       p2_ball_acc = p2_force_mult * p2_ball_vec
-      ball_acc = p1_ball_acc + p2_ball_acc
+      p3_ball_acc = p3_force_mult * p3_ball_vec
+      ball_acc = p1_ball_acc + p2_ball_acc + p3_ball_acc
     else:
       ball_acc = jp.zeros(2)
     # ball drag (is this basically negigible?)
@@ -117,7 +131,7 @@ class PITM(env.Env):
     #### REWARDS ####
     # convention: all terms positive, subtract terms labelled 'cost', add 'reward'
     # terms:
-    #   `p1_ball_reward`, `p2_ball_reward`  : +ve rewards for players approaching ball
+    #   `p1_ball_reward`, `p2_ball_reward`, `p3_ball_reward`  : +ve rewards for players approaching ball
     #   `piggy_ball_reward`                 : +ve reward for piggy moving away from ball
     #   `piggy_touch_ball_cost`             : -ve cost for piggy touching ball, end episode
     #   `ctrl_cost`                         : -ve cost for control (input forces)
@@ -126,16 +140,21 @@ class PITM(env.Env):
 
     # Each player move towards ball, small reward
     scale = 10.0
-    p1_pos_after, p2_pos_after = qp.pos[2,:2], qp.pos[3,:2]
     ball_pos_after = qp.pos[0,:2]
+    p1_pos_after = qp.pos[2,:2]
+    p2_pos_after = qp.pos[3,:2]
+    p3_pos_after = qp.pos[4,:2]
     p1_ball_dist_after = norm(ball_pos_after - p1_pos_after)
     p2_ball_dist_after = norm(ball_pos_after - p2_pos_after)
+    p3_ball_dist_after = norm(ball_pos_after - p3_pos_after)
     # +ve change, towards ball
     p1_ball_dist_change = (p1_ball_dist_before - p1_ball_dist_after) / self.sys.config.dt
     p2_ball_dist_change = (p2_ball_dist_before - p2_ball_dist_after) / self.sys.config.dt
-    p1_ball_reward, p2_ball_reward = p1_ball_dist_change , p2_ball_dist_change
+    p3_ball_dist_change = (p3_ball_dist_before - p3_ball_dist_after) / self.sys.config.dt
+    p1_ball_reward, p2_ball_rewardm p3_ball_reward = p1_ball_dist_change , p2_ball_dist_change, p3_ball_dist_change
     p1_ball_reward *= scale
     p2_ball_reward *= scale
+    p3_ball_reward *= scale
 
     # Ball move away from piggy, reward
     scale = 30.0
@@ -158,13 +177,14 @@ class PITM(env.Env):
     survive_reward = jp.float32(1)
 
     # total reward
-    reward = (p1_ball_reward + p2_ball_reward +
+    reward = (p1_ball_reward + p2_ball_reward + p3_ball_reward +
               piggy_ball_reward - piggy_touch_ball_cost - 
               ctrl_cost - contact_cost + survive_reward)
 
     state.metrics.update(
         p1_ball_reward=p1_ball_reward,
         p2_ball_reward=p2_ball_reward,
+        p3_ball_reward=p3_ball_reward,
         piggy_ball_reward=piggy_ball_reward,
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
         ctrl_reward=-1*ctrl_cost,
@@ -178,7 +198,7 @@ class PITM(env.Env):
 
   @property
   def action_size(self):
-    return 6 # 2 each for each player to exert on themselves, 1 per player to exert on ball
+    return 9 # 3 per player, 2 for their own movement, 1 for exerting force on ball
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
@@ -305,6 +325,35 @@ bodies {
   }
 }
 
+bodies {
+  name: "p3"
+  colliders {
+    box {
+      halfsize {
+        x: 0.5
+        y: 0.5
+        z: 0.5
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
  bodies {
   name: "ground"
   colliders {
@@ -372,6 +421,14 @@ forces {
 forces {
   name: "p2_thrust"
   body: "p2"
+  strength: 1.0
+  thruster {
+  }
+}
+
+forces {
+  name: "p3_thrust"
+  body: "p3"
   strength: 1.0
   thruster {
   }
