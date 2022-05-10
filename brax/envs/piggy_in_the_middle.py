@@ -26,7 +26,11 @@ class PITM(env.Env):
   """
 
   def __init__(self, legacy_spring=False, **kwargs):
-    config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
+    try:
+      self.walls = kwargs.pop('walls')
+    except:
+      self.walls = False
+    config = _SYSTEM_CONFIG_WALLS if self.walls else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
 
   def reset(self, rng: jp.ndarray) -> env.State:
@@ -36,6 +40,11 @@ class PITM(env.Env):
     qp.pos[2,1] = 3                   # move p1 init pos
     qp.pos[3,1] = -3                  # move p2 init pos
     qp.pos[4,:2] = jp.array([-3, 0])  # move p3 init pos
+    if self.walls:
+      qp.pos[-1] = jp.array([15, 0, 0])
+      qp.pos[-2] = jp.array([-15, 0, 0])
+      qp.pos[-3] = jp.array([0, 15, 0])
+      qp.pos[-4] = jp.array([0, -15, 0])
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
     reward, done, zero = jp.zeros(3)
@@ -151,7 +160,7 @@ class PITM(env.Env):
     p1_ball_dist_change = (p1_ball_dist_before - p1_ball_dist_after) / self.sys.config.dt
     p2_ball_dist_change = (p2_ball_dist_before - p2_ball_dist_after) / self.sys.config.dt
     p3_ball_dist_change = (p3_ball_dist_before - p3_ball_dist_after) / self.sys.config.dt
-    p1_ball_reward, p2_ball_rewardm p3_ball_reward = p1_ball_dist_change , p2_ball_dist_change, p3_ball_dist_change
+    p1_ball_reward, p2_ball_reward, p3_ball_reward = p1_ball_dist_change , p2_ball_dist_change, p3_ball_dist_change
     p1_ball_reward *= scale
     p2_ball_reward *= scale
     p3_ball_reward *= scale
@@ -437,3 +446,372 @@ forces {
 dynamics_mode: "pbd"
 
 """ 
+
+_SYSTEM_CONFIG_WALLS = """
+bodies {
+  name: "ball"
+  colliders {
+    capsule {
+      radius: 0.5
+      length: 1.0
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
+bodies {
+  name: "piggy"
+  colliders {
+    box {
+      halfsize {
+        x: 0.5
+        y: 0.5
+        z: 0.5
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
+bodies {
+  name: "p1"
+  colliders {
+    box {
+      halfsize {
+        x: 0.5
+        y: 0.5
+        z: 0.5
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
+bodies {
+  name: "p2"
+  colliders {
+    box {
+      halfsize {
+        x: 0.5
+        y: 0.5
+        z: 0.5
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
+bodies {
+  name: "p3"
+  colliders {
+    box {
+      halfsize {
+        x: 0.5
+        y: 0.5
+        z: 0.5
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 1.0
+  frozen {
+    position {
+    }
+    rotation {
+    }
+  }
+}
+
+ bodies {
+  name: "ground"
+  colliders {
+    plane {
+    }
+    material {
+      elasticity: 1.0
+      friction: 0.1
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  frozen {
+    position {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    rotation {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    all: true
+  }
+}
+
+bodies {
+  name: "wall_1"
+  colliders {
+    box {
+      halfsize {
+        x: 15.0
+        y: 0.25
+        z: 3.0
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 10.0
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 10.0
+  frozen {
+    position {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    rotation {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    all: true
+  }
+}
+bodies {
+  name: "wall_2"
+  colliders {
+    box {
+      halfsize {
+        x: 15.0
+        y: 0.25
+        z: 3.0
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 10.0
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 10.0
+  frozen {
+    position {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    rotation {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    all: true
+  }
+}
+bodies {
+  name: "wall_3"
+  colliders {
+    box {
+      halfsize {
+        x: 0.25
+        y: 15.0
+        z: 3.0
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 10.0
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 10.0
+  frozen {
+    position {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    rotation {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    all: true
+  }
+}
+bodies {
+  name: "wall_4"
+  colliders {
+    box {
+      halfsize {
+        x: 0.25
+        y: 15.0
+        z: 3.0
+      }
+    }
+    material {
+      elasticity: 1.0
+      friction: 10.0
+    }
+  }
+  inertia {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+  mass: 10.0
+  frozen {
+    position {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    rotation {
+      x: 1.0
+      y: 1.0
+      z: 1.0
+    }
+    all: true
+  }
+}
+
+elasticity: 1.0
+friction: 0.1
+gravity {
+  z: -9.800000190734863
+}
+angular_damping: -0.20
+dt: 0.05000000074505806
+substeps: 20
+frozen {
+}
+
+forces {
+  name: "ball_thrust"
+  body: "ball"
+  strength: 1.0
+  thruster {
+  }
+}
+
+forces {
+  name: "piggy_thrust"
+  body: "piggy"
+  strength: 1.0
+  thruster {
+  }
+}
+
+forces {
+  name: "p1_thrust"
+  body: "p1"
+  strength: 1.0
+  thruster {
+  }
+}
+
+forces {
+  name: "p2_thrust"
+  body: "p2"
+  strength: 1.0
+  thruster {
+  }
+}
+
+forces {
+  name: "p3_thrust"
+  body: "p3"
+  strength: 1.0
+  thruster {
+  }
+}
+
+dynamics_mode: "pbd"
+
+"""
