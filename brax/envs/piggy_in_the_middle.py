@@ -201,7 +201,7 @@ class PITM(env.Env):
         p2_ball_reward=p2_ball_reward,
         p3_ball_reward=p3_ball_reward,
         piggy_ball_reward=piggy_ball_reward,
-        piggy_ball_static_reward_cost=piggy_ball_static_reward,
+        piggy_ball_static_reward=piggy_ball_static_reward,
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
