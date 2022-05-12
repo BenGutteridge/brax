@@ -52,6 +52,7 @@ class PITM(env.Env):
         'p1_ball_reward': zero,
         'p2_ball_reward': zero,
         'p3_ball_reward': zero,
+        'player_separation_reward': zero,
         'piggy_ball_reward': zero,
         'piggy_ball_static_reward': zero,
         'piggy_touch_ball_reward': zero,
@@ -81,12 +82,13 @@ class PITM(env.Env):
     # Generating player actions
     act_is_vel = True
     if act_is_vel:
+      vel_mult = 10.
       # Generate force for players: F = m*(v-u)/dt
-      desired_vel = 10*action[:2]
+      desired_vel = vel_mult * action[:2]
       p1_acc = (desired_vel - state.qp.vel[2,:2]) / self.sys.config.dt
-      desired_vel = 10*action[2:4]
+      desired_vel = vel_mult * action[2:4]
       p2_acc = (desired_vel - state.qp.vel[3,:2]) / self.sys.config.dt
-      desired_vel = 10*action[4:6]
+      desired_vel = vel_mult * action[4:6]
       p3_acc = (desired_vel - state.qp.vel[4,:2]) / self.sys.config.dt
     else: # use actions as forces directly
       p1_acc, p2_acc, p3_acc = action[:2], action[2:4], action[4:6]
@@ -111,10 +113,10 @@ class PITM(env.Env):
     # scale down force based on distance from ball
     ball_thrusters = True
     if ball_thrusters:
-      # max_dist = 3. # max distance from ball that can still exert force
-      p1_force_mult = 10*(action[-1]/p1_ball_dist_before)**2 # inverse sq dropoff
-      p2_force_mult = 10*(action[-2]/p2_ball_dist_before)**2
-      p3_force_mult = 10*(action[-3]/p3_ball_dist_before)**2
+      force_multiplier = 10.
+      p1_force_mult = force_multiplier*(action[-1]/p1_ball_dist_before)**2 # inverse sq dropoff
+      p2_force_mult = force_multiplier*(action[-2]/p2_ball_dist_before)**2
+      p3_force_mult = force_multiplier*(action[-3]/p3_ball_dist_before)**2
       # get acceleration vectors
       p1_ball_acc = p1_force_mult * p1_ball_vec
       p2_ball_acc = p2_force_mult * p2_ball_vec
@@ -150,7 +152,7 @@ class PITM(env.Env):
     #   `survive_reward`                    : +ve fixed reward for episode not ending
 
     # Each player move towards ball, small reward
-    scale = 1.0
+    scale = 5.0
     ball_pos_after = qp.pos[0,:2]
     p1_pos_after = qp.pos[2,:2]
     p2_pos_after = qp.pos[3,:2]
@@ -166,6 +168,21 @@ class PITM(env.Env):
     p1_ball_reward *= scale
     p2_ball_reward *= scale
     p3_ball_reward *= scale
+
+    # Reward for players being far from each other
+    scale = 1.
+    player_poses = [p1_pos_after, p2_pos_after, p3_pos_after]
+    p_dists = jp.float32(0)
+    while len(player_poses):
+      player_pose = player_poses.pop(0)
+      p_dists += sum([norm(player_pose - p) for p in player_poses])
+    player_separation_reward = p_dists * scale
+
+    
+    # Large fixed penalty for player getting outside walls
+    for player_pos in [p1_pos_after, p2_pos_after, p3_pos_after]:
+      out_of_bounds_reward += jp.float32(norm(player_pos[0]) > 16 or norm(player_pos[1]) > 16)
+    out_of_bounds_reward *= -10000 
 
     # Ball move away from piggy, reward
     scale = 20.0
@@ -200,6 +217,7 @@ class PITM(env.Env):
         p1_ball_reward=p1_ball_reward,
         p2_ball_reward=p2_ball_reward,
         p3_ball_reward=p3_ball_reward,
+        player_separation_reward=player_separation_reward,
         piggy_ball_reward=piggy_ball_reward,
         piggy_ball_static_reward=piggy_ball_static_reward,
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
