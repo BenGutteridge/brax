@@ -53,6 +53,7 @@ class PITM(env.Env):
         'p2_ball_reward': zero,
         'p3_ball_reward': zero,
         'player_separation_reward': zero,
+        'out_of_bounds_reward': zero,
         'piggy_ball_reward': zero,
         'piggy_ball_static_reward': zero,
         'piggy_touch_ball_reward': zero,
@@ -179,10 +180,11 @@ class PITM(env.Env):
     player_separation_reward = p_dists * scale
 
     
-    # Large fixed penalty for player getting outside walls
+    # Large fixed cost for player getting outside walls
+    out_of_bounds_cost = 0.
     for player_pos in [p1_pos_after, p2_pos_after, p3_pos_after]:
       out_of_bounds_reward += jp.float32(norm(player_pos[0]) > 16 or norm(player_pos[1]) > 16)
-    out_of_bounds_reward *= -10000 
+    out_of_bounds_cost *= 10000 
 
     # Ball move away from piggy, reward
     scale = 20.0
@@ -210,7 +212,10 @@ class PITM(env.Env):
 
     # total reward
     reward = (p1_ball_reward + p2_ball_reward + p3_ball_reward +
-              piggy_ball_reward - piggy_touch_ball_cost - 
+              player_separation_reward -
+              out_of_bounds_cost +
+              piggy_ball_reward + piggy_ball_static_reward - 
+              piggy_touch_ball_cost - 
               ctrl_cost - contact_cost + survive_reward)
 
     state.metrics.update(
@@ -218,6 +223,7 @@ class PITM(env.Env):
         p2_ball_reward=p2_ball_reward,
         p3_ball_reward=p3_ball_reward,
         player_separation_reward=player_separation_reward,
+        out_of_bounds_reward=-1*out_of_bounds_cost,
         piggy_ball_reward=piggy_ball_reward,
         piggy_ball_static_reward=piggy_ball_static_reward,
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
