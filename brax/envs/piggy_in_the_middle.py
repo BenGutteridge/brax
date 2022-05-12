@@ -183,7 +183,7 @@ class PITM(env.Env):
     # Large fixed cost for player getting outside walls
     out_of_bounds_cost = 0.
     for player_pos in [p1_pos_after, p2_pos_after, p3_pos_after]:
-      out_of_bounds_reward += jp.float32(norm(player_pos[0]) > 16 or norm(player_pos[1]) > 16)
+      out_of_bounds_cost += jp.float32(norm(player_pos[0]) > 16 or norm(player_pos[1]) > 16)
     out_of_bounds_cost *= 10000 
 
     # Ball move away from piggy, reward
