@@ -58,8 +58,8 @@ class PITM(env.Env):
         'ctrl_reward': zero,
         'contact_reward': zero,
         'survive_reward': zero,
-        # 'piggy_action': jp.zeros(3),
-        # 'player_actions': jp.zeros(3*2),
+        'ball_thrust_x': zero,
+        'ball_thrust_y': zero,
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -206,8 +206,8 @@ class PITM(env.Env):
         ctrl_reward=-1*ctrl_cost,
         contact_reward=-1*contact_cost,
         survive_reward=survive_reward,
-        # piggy_action=piggy_act,
-        # player_actions=player_act,
+        ball_thrust_x=ball_acc[0],
+        ball_thrust_y=ball_acc[1],
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
