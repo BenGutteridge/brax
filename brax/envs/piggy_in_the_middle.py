@@ -176,15 +176,16 @@ class PITM(env.Env):
     p_dists = jp.float32(0)
     while len(player_poses):
       player_pose = player_poses.pop(0)
-      p_dists += sum([norm(player_pose - p) for p in player_poses])
+      p_dists += jp.sum(jp.array([norm(player_pose - p) for p in player_poses]))
     player_separation_reward = p_dists * scale
 
     
     # Large fixed cost for player getting outside walls
+    fixed_cost, scale = 10000, 1
     out_of_bounds_cost = 0.
     for player_pos in [p1_pos_after, p2_pos_after, p3_pos_after]:
-      out_of_bounds_cost += jp.float32(norm(player_pos[0]) > 16 or norm(player_pos[1]) > 16)
-    out_of_bounds_cost *= 10000 
+      out_of_bounds_cost += jp.amax(jp.where(abs(player_pos) > 16, jp.float32(1), jp.float32(0)))
+    out_of_bounds_cost *= fixed_cost * scale 
 
     # Ball move away from piggy, reward
     scale = 20.0
