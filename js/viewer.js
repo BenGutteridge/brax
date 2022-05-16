@@ -62,7 +62,7 @@ class Viewer {
     } else if (system.config.frozen?.position?.y) {
       this.camera.position.set(0, 1, 2);
     } else {
-      this.camera.position.set(5, 2, 8);
+      this.camera.position.set(0, 20, 0);
     }
     this.camera.follow = true;
     this.camera.freezeAngle = false;
