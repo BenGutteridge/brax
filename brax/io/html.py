@@ -37,7 +37,7 @@ def save_html(path: str,
     fout.write(render(sys, qps))
 
 
-def render(sys: brax.System, qps: List[brax.QP], height: int = 480) -> str:
+def render(sys: brax.System, qps: List[brax.QP], height: int = 720) -> str:
   """Returns an HTML page that visualizes the system and qps trajectory."""
   if any((len(qp.pos.shape), len(qp.rot.shape)) != (2, 2) for qp in qps):
     raise RuntimeError('unexpected shape in qp.')
