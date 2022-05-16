@@ -69,10 +69,10 @@ class Viewer {
     this.camera.followDistance = 50;
 
     this.scene.background = new THREE.Color(0xa0a0a0);
-    this.scene.fog = new THREE.Fog(0xa0a0a0, 40, 60);
+    this.scene.fog = new THREE.Fog(0xa0a0a0, 100, 1000);
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444);
-    hemiLight.position.set(0, 20, 0);
+    hemiLight.position.set(0, 30, 0);
     this.scene.add(hemiLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff);
