@@ -66,7 +66,7 @@ class Viewer {
     }
     this.camera.follow = true;
     this.camera.freezeAngle = false;
-    this.camera.followDistance = 10;
+    this.camera.followDistance = 50;
 
     this.scene.background = new THREE.Color(0xa0a0a0);
     this.scene.fog = new THREE.Fog(0xa0a0a0, 40, 60);

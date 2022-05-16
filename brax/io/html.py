@@ -74,8 +74,7 @@ _HTML = """
     </script>
     <div id="brax-viewer"></div>
     <script type="module">
-      <!-- import {Viewer} from 'https://cdn.jsdelivr.net/gh/google/brax@v0.0.12/js/viewer.js'; --> <!-- their viewer -->
-      import {Viewer} from 'https://gitcdn.link/cdn/BenGutteridge/brax/3p_pitm/brax/ben_utils/ben_viewer.js'; <!-- my viewer, different defaults -->
+      import {Viewer} from 'https://cdn.jsdelivr.net/gh/google/brax@v0.0.12/js/viewer.js';
       const domElement = document.getElementById('brax-viewer');
       var viewer = new Viewer(domElement, system);
     </script>
