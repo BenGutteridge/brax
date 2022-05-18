@@ -64,7 +64,12 @@ def compute_ppo_loss(
     extra_loss_update_ratios: Optional[Dict[str, float]] = None,
     extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
                                                 jnp.ndarray]]] = None):
-  """Computes PPO loss."""
+  """
+  Computes PPO loss.
+  1. get policy and value function models
+  2. some bootstrapping - use current value function estimate to improve value function estimate
+  3. sample target (theta - to optimise) and behaviour (theta_old - getting data) actions
+  """
   policy_params, value_params = models['policy'], models['value']
   extra_params = models.get('extra', {})
   policy_logits = policy_apply(policy_params, data.obs[:-1])
@@ -99,25 +104,26 @@ def compute_ppo_loss(
       bootstrap_value=bootstrap_value,
       lambda_=lambda_,
       discount=discounting)
+  # rho is the ratio of (exponentiated) policy functions: theta and theta_old ('behaviour' is data, 'target' is what we're optimising)
   rho_s = jnp.exp(target_action_log_probs - behaviour_action_log_probs)
 
+  # PPO paper, eq. 7
   surrogate_loss1 = rho_s * advantages
   surrogate_loss2 = jnp.clip(rho_s, 1 - ppo_epsilon,
-                             1 + ppo_epsilon) * advantages
-
-  policy_loss = -jnp.mean(jnp.minimum(surrogate_loss1, surrogate_loss2))
+                             1 + ppo_epsilon) * advantages 
+  policy_loss = -jnp.mean(jnp.minimum(surrogate_loss1, surrogate_loss2)) # NEGATIVE loss - large advantage is good!
 
   # Value function loss
   v_error = vs - baseline
   value_loss = jnp.mean(v_error * v_error) * 0.5 * 0.5
 
   # Entropy reward
-  entropy = jnp.mean(parametric_action_distribution.entropy(policy_logits, rng))
-  entropy_loss = entropy_cost * -entropy
+  entropy = jnp.mean(parametric_action_distribution.entropy(policy_logits, rng)) # mean of \pi_\theta
+  entropy_loss = entropy_cost * -entropy # NEGATIVE loss - large entropy is good (more randomness, exploration)!
 
-  total_loss = policy_loss + value_loss + entropy_loss
+  total_loss = policy_loss + value_loss + entropy_loss # NEGATIVE (unless vs >> baseline)
 
-  # Additional losses
+  # Additional losses (custom - have to pass these in)
   extra_losses = {}
   if extra_loss_fns:
     for key, loss_fn in extra_loss_fns.items():
@@ -178,7 +184,7 @@ def train(environment_fn: Callable[..., envs.Env],
   xt = time.time()
 
   process_count = jax.process_count()
-  process_id = jax.process_index()
+  process_id = jax.process_index() # "on most programs, this will always be zero"
   local_device_count = jax.local_device_count()
   local_devices_to_use = local_device_count
   if max_devices_per_host:
@@ -252,8 +258,8 @@ def train(environment_fn: Callable[..., envs.Env],
       discounting=discounting,
       reward_scaling=reward_scaling,
       extra_loss_update_ratios=extra_loss_update_ratios,
-      extra_loss_fns=extra_loss_fns)
-
+      extra_loss_fns=extra_loss_fns) # fn returns total_loss
+    
   grad_loss = jax.grad(loss_fn, has_aux=True)
 
   def do_one_step_eval(carry, unused_target_t):
@@ -277,6 +283,13 @@ def train(environment_fn: Callable[..., envs.Env],
     return state, key
 
   def do_one_step(carry, unused_target_t):
+    """
+    1. Get state, policy function
+    2. Sample action
+    3. Apply action, perform step
+    4. Output step data, resulting state
+    (this is repeated unroll_length times) 
+    """
     state, normalizer_params, policy_params, extra_params, key = carry
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
@@ -315,6 +328,9 @@ def train(environment_fn: Callable[..., envs.Env],
     return (state, normalizer_params, policy_params, extra_params, key), data
 
   def update_model(carry, data_tuple):
+    """
+    optimises the loss function
+    """
     optimizer_state, params, key = carry
     data, udata = data_tuple
     key, key_loss = jax.random.split(key)
@@ -327,6 +343,11 @@ def train(environment_fn: Callable[..., envs.Env],
     return (optimizer_state, params, key), metrics
 
   def minimize_epoch(carry, unused_t):
+    """
+    ONE (uodate) EPOCH: Updates model (minimises loss) over all minibatches
+    - Runs over, and updates model for, each minibatch of data
+    - Run `num_update_epochs` times
+    """
     optimizer_state, params, data, udata, key = carry
     key, key_perm, key_grad = jax.random.split(key, 3)
     permutation = jax.random.permutation(key_perm, data.obs.shape[1])
@@ -342,10 +363,16 @@ def train(environment_fn: Callable[..., envs.Env],
     u_ndata = jax.tree_map(lambda x: convert_data(x, permutation), udata)
     (optimizer_state, params, _), metrics = jax.lax.scan(
         update_model, (optimizer_state, params, key_grad), (ndata, u_ndata),
-        length=num_minibatches)
+        length=num_minibatches) # updates `num_minibatches` times
     return (optimizer_state, params, data, udata, key), metrics
 
   def run_epoch(carry, unused_t):
+    """
+    1. Generate unroll data
+    2. For `num_update_epochs` epochs: 
+        minimise loss over each minibatch, for all minibatches
+        (i.e. end up going over all data - an epoch)
+    """
     training_state, state = carry
     key_minimize, key_generate_unroll, new_key = jax.random.split(
         training_state.key, 3)
@@ -383,13 +410,20 @@ def train(environment_fn: Callable[..., envs.Env],
       batch_size * unroll_length * num_minibatches * action_repeat)
 
   def _minimize_loop(training_state, state):
+    """
+    Main loop:
+    0. Number of data epochs determined by number of environment steps given.
+    1. For num_epochs: run `run_epoch`.
+    """
     (training_state, state), losses = jax.lax.scan(
         run_epoch, (training_state, state), (),
         length=num_epochs // log_frequency)
     losses = jax.tree_map(jnp.mean, losses)
     return (training_state, state), losses
 
-  minimize_loop = jax.pmap(_minimize_loop, axis_name='i')
+  ### DEFINING FUNC -- NOT WHERE THE TRAINING ACTUALLY HAPPENS
+  # pmap: parallel computation, same computation on different input data 
+  minimize_loop = jax.pmap(_minimize_loop, axis_name='i') 
 
   inference = make_inference_fn(
       core_env.observation_size, core_env.action_size, normalize_observations,
@@ -412,7 +446,7 @@ def train(environment_fn: Callable[..., envs.Env],
     logging.info('starting iteration %s %s', it, time.time() - xt)
     t = time.time()
 
-    if process_id == 0:
+    if process_id == 0: # pretty much always runs
       eval_state, key_debug = (
           run_eval(eval_first_state, key_debug,
                    training_state.params['policy'],
@@ -454,7 +488,7 @@ def train(environment_fn: Callable[..., envs.Env],
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
-    (training_state, state), losses = minimize_loop(training_state, state)
+    (training_state, state), losses = minimize_loop(training_state, state) # ACTUALLY DOES THE TRAINING
     jax.tree_map(lambda x: x.block_until_ready(), losses)
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
            (time.time() - t)) * action_repeat
@@ -479,7 +513,7 @@ def train(environment_fn: Callable[..., envs.Env],
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
 
-  return (inference, params, metrics)
+  return (inference, params, metrics) # policy, policy params, saved training data
 
 
 def make_inference_fn(

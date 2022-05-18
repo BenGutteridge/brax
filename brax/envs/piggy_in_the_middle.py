@@ -181,7 +181,7 @@ class PITM(env.Env):
 
     
     # Large fixed cost for player getting outside walls
-    fixed_cost, scale = 10000, 1
+    fixed_cost, scale = 1000, 1
     out_of_bounds_cost = 0.
     for player_pos in [p1_pos_after, p2_pos_after, p3_pos_after]:
       out_of_bounds_cost += jp.amax(jp.where(abs(player_pos) > 16, jp.float32(1), jp.float32(0)))
