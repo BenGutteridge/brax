@@ -3,6 +3,7 @@ import sys
 import numpy as np
 from os.path import join
 
+
 def make_config(n_players=2, walls=False, output_path=False):
   body_idx, n = {}, 0
   pitm = brax.Config(dt=0.05, substeps=20, dynamics_mode='pbd')
