@@ -118,6 +118,18 @@ def make_models(policy_params_size: int,
   Returns:
     a model for policy and a model for value function
   """
-  policy_model = make_model([32, 32, 32, 32, policy_params_size], obs_size)
-  value_model = make_model([256, 256, 256, 256, 256, 1], obs_size)
+
+  # policy_model = make_model([32, 32, 32, 32, policy_params_size], obs_size) # OG
+  # value_model = make_model([256, 256, 256, 256, 256, 1], obs_size) # OG
+
+  pol_num__hidden_layers = 4        # default 4
+  pol_num_neurons_per_layer = 128   # default 32
+  val_num__hidden_layers = 5        # default 5
+  val_num_neurons_per_layer = 256   # default 256
+  pol_layer_sizes = [pol_num_neurons_per_layer] * pol_num__hidden_layers + [policy_params_size]
+  val_layer_sizes = [val_num_neurons_per_layer] * val_num__hidden_layers + [1]
+
+  policy_model = make_model(pol_layer_sizes, obs_size)
+  value_model = make_model(val_layer_sizes, obs_size)
+  
   return policy_model, value_model
