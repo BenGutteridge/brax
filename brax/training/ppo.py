@@ -494,14 +494,17 @@ def train(
       logging.info(metrics)
       current_step = int(training_state.normalizer_params[0][0]) * action_repeat
       if progress_fn:
-        progress_fn(current_step, metrics)
+        normalizer_params = jax.tree_map(lambda x: x[0], training_state.normalizer_params)
+        policy_params = jax.tree_map(lambda x: x[0], training_state.params['policy'])
+        params = normalizer_params, policy_params
+        progress_fn(current_step, metrics, params)
 
       if checkpoint_dir:
-        normalizer_params = jax.tree_map(lambda x: x[0],
-                                         training_state.normalizer_params)
-        policy_params = jax.tree_map(lambda x: x[0],
-                                     training_state.params['policy'])
-        params = normalizer_params, policy_params
+        # normalizer_params = jax.tree_map(lambda x: x[0],
+        #                                  training_state.normalizer_params)
+        # policy_params = jax.tree_map(lambda x: x[0],
+        #                              training_state.params['policy'])
+        # params = normalizer_params, policy_params
         path = os.path.join(checkpoint_dir, f'ppo_{current_step}.pkl')
         model.save_params(path, params)
 
