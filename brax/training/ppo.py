@@ -209,6 +209,10 @@ def train(
     reward_scaling=1.,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
     checkpoint_dir: Optional[str] = None,
+    pol_num_hidden_layers=4,          
+    pol_num_neurons_per_layer=32,
+    val_num_hidden_layers=5,
+    val_num_neurons_per_layer = 256,
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -257,7 +261,12 @@ def train(
 
   policy_model, value_model = networks.make_models(
       parametric_action_distribution.param_size,
-      core_env.observation_size)
+      core_env.observation_size,
+      pol_num_hidden_layers=4,          
+      pol_num_neurons_per_layer=32,
+      val_num_hidden_layers=5,
+      val_num_neurons_per_layer = 256,
+      )
   key_policy, key_value = jax.random.split(key_models)
 
   optimizer = optax.adam(learning_rate=learning_rate)
