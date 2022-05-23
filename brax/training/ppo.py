@@ -547,14 +547,20 @@ def train(
   return (inference, params, metrics) # policy, policy params, saved training data
 
 
-def make_inference_fn(observation_size, action_size, normalize_observations):
+def make_inference_fn(observation_size, action_size, normalize_observations, **layers):
   """Creates params and inference function for the PPO agent."""
   _, obs_normalizer_apply_fn = normalization.make_data_and_apply_fn(
       observation_size, normalize_observations)
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=action_size)
   policy_model, _ = networks.make_models(
-      parametric_action_distribution.param_size, observation_size)
+      parametric_action_distribution.param_size, 
+      observation_size,
+      pol_num_hidden_layers=layers["pol_num_hidden_layers"],          
+      pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
+      val_num_hidden_layers=layers["val_num_hidden_layers"],
+      val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
+      )
 
   def inference_fn(params, obs, key):
     normalizer_params, policy_params = params
