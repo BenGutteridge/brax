@@ -20,6 +20,8 @@ from brax.envs import env
 from brax.jumpy import safe_norm as norm
 
 from collections import OrderedDict as odict
+from typing import Dict, Any, Callable, Tuple, Optional, Union
+from jax import numpy as jnp
 
 
 class PITM_MA(env.Env):
@@ -80,7 +82,11 @@ class PITM_MA(env.Env):
     }
     return env.State(qp, obs, reward, done, metrics)
 
-  def step(self, state: env.State, action: jp.ndarray) -> env.State:
+  def step(self, 
+           state: env.State, 
+           action: jp.ndarray,
+           normalizer_params: Dict[str, jnp.ndarray] = None,
+           extra_params: Dict[str, Dict[str, jnp.ndarray]] = None ) -> env.State:
     """Run one timestep of the environment's dynamics."""
 
     # Generating piggy action
