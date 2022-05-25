@@ -19,6 +19,8 @@ from brax import jumpy as jp
 from brax.envs import env
 from brax.jumpy import safe_norm as norm
 
+from collections import OrderedDict as odict
+
 
 class PITM_MA(env.Env):
   """
@@ -32,6 +34,19 @@ class PITM_MA(env.Env):
       self.walls = False
     config = _SYSTEM_CONFIG_WALLS if self.walls else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
+    # adaptations to MAPPO
+    self.group_action_shapes = odict(dict(
+      p1=dict(indices=(0,1,8),
+              shape=(3,),
+              size=3),
+      p2=dict(indices=(2,3,7),
+              shape=(3,),
+              size=3),
+      p3=dict(indices=(4,5,6),
+              shape=(3,),
+              size=3),
+  ))
+    self.is_multiagent = True
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
