@@ -61,6 +61,8 @@ def wrap(core_env: envs.Env,
            normalizer_params: Dict[str, jnp.ndarray] = None,
            extra_params: Dict[str, Dict[str, jnp.ndarray]] = None) -> EnvState:
     if extra_step_kwargs:
+      print(core_env)
+      print(core_env.__dict__)
       core = core_env.step(
           state.core,
           action,
