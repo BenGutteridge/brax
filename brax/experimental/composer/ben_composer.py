@@ -469,7 +469,18 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
            batch_size: Optional[int] = None,
            **kwargs) -> Env:
   """Creates an Env with a specified brax system."""
-  env = _envs[env_name](**kwargs)
+  if env_name in composer_envs.ENV_DESCS: # works as regular composer
+    desc = composer_envs.ENV_DESCS[env_name]
+    if callable(desc):
+      desc = desc(**kwargs)
+    else:
+      assert not kwargs, f'unused kwargs: {kwargs}'
+    env_desc = dict(**env_desc, **desc)
+    env_desc = composer_utils.edit_desc(env_desc, desc_edits)
+    composer = Composer(**env_desc)
+    env = ComponentEnv(composer=composer, env_desc=env_desc)
+  else:
+    env = _envs[env_name](**kwargs)
 
   # add wrappers
   env = braxlines_wrappers.ExtraStepArgsWrapper(env)
