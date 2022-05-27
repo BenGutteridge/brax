@@ -89,6 +89,8 @@ class PITM_MA(env.Env):
            extra_params: Dict[str, Dict[str, jnp.ndarray]] = None ) -> env.State:
     """Run one timestep of the environment's dynamics."""
 
+    del normalizer_params, extra_params
+
     # Generating piggy action
     ball_pos_before = state.qp.pos[0,:2]
     piggy_pos_before = state.qp.pos[1,:2]
