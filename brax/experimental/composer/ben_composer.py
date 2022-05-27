@@ -83,16 +83,16 @@ from brax.experimental.composer.components import load_component
 from brax.experimental.composer.components import register_default_components
 from jax import numpy as jnp
 
-from brax.envs import piggy_in_the_middle_MA
-_envs = {
-    'piggy_in_the_middle_MA': piggy_in_the_middle_MA.PITM_MA,
-}
-
 assert_env_params = composer_envs.assert_env_params
 inspect_env = composer_envs.inspect_env
 list_env = composer_envs.list_env
 register_env = composer_envs.register_env
 register_lib = composer_envs.register_lib
+
+from brax.envs import piggy_in_the_middle_MA
+_envs = {
+    'piggy_in_the_middle_MA': piggy_in_the_middle_MA.PITM_MA,
+}
 
 register_default_components()
 composer_envs.register_default_libs()
@@ -462,7 +462,7 @@ def get_obs_dict_shape(env: Env):
     return (env.observation_size,)
 
 
-def create(env_name: str = 'piggy_in_the_middle_MA',
+def create(env_name: str = None,
            env_desc: Union[Dict[str, Any], Callable[..., Dict[str,
                                                               Any]]] = None,
            desc_edits: Dict[str, Any] = None,
@@ -472,19 +472,37 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
            batch_size: Optional[int] = None,
            **kwargs) -> Env:
   """Creates an Env with a specified brax system."""
-  if env_name in composer_envs.ENV_DESCS: # works as regular composer
+  assert env_name or env_desc, 'env_name or env_desc must be supplied'
+  env_desc = env_desc or {}
+  desc_edits = desc_edits or {}
+  if env_name in composer_envs.ENV_DESCS:
     desc = composer_envs.ENV_DESCS[env_name]
     if callable(desc):
       desc = desc(**kwargs)
     else:
       assert not kwargs, f'unused kwargs: {kwargs}'
-    env_desc = {}
     env_desc = dict(**env_desc, **desc)
     env_desc = composer_utils.edit_desc(env_desc, desc_edits)
     composer = Composer(**env_desc)
     env = ComponentEnv(composer=composer, env_desc=env_desc)
+  elif env_desc:
+    if callable(env_desc):
+      env_desc = env_desc(**kwargs)
+    else:
+      assert not kwargs, f'unused kwargs: {kwargs}'
+    env_desc = composer_utils.edit_desc(env_desc, desc_edits)
+    composer = Composer(**env_desc)
+    env = ComponentEnv(composer=composer, env_desc=env_desc)
   else:
-    env = _envs[env_name](**kwargs)
+    # this should work for pitm...
+    env = envs.create(
+        env_name,
+        episode_length=episode_length,
+        action_repeat=action_repeat,
+        auto_reset=auto_reset,
+        batch_size=batch_size,
+        **kwargs)
+    return env  # type: ignore
 
   # add wrappers
   env = braxlines_wrappers.ExtraStepArgsWrapper(env)
@@ -497,9 +515,9 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
   return env  # type: ignore
 
 
-def create_fn(env_name: str = 'piggy_in_the_middle_MA',
+def create_fn(env_name: str = None,
               env_desc: Union[Dict[str, Any], Callable[..., Dict[str,
-                                                              Any]]] = None,
+                                                                 Any]]] = None,
               desc_edits: Dict[str, Any] = None,
               episode_length: int = 1000,
               action_repeat: int = 1,
