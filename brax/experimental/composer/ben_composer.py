@@ -469,7 +469,7 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
            batch_size: Optional[int] = None,
            **kwargs) -> Env:
   """Creates an Env with a specified brax system."""
-  env = _envs[env_name]
+  env = _envs[env_name](**kwargs)
 
   # add wrappers
   env = braxlines_wrappers.ExtraStepArgsWrapper(env)
