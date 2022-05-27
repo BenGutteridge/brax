@@ -68,6 +68,8 @@ def wrap(core_env: envs.Env,
       print(core_env.__dict__['env'].__dict__)
       print(core_env.__dict__['env'].__dict__['env'])
       print(core_env.__dict__['env'].__dict__['env'].__dict__)
+      print(core_env.__dict__['env'].__dict__['env'].__dict__['env'])
+      print(core_env.__dict__['env'].__dict__['env'].__dict__['env'].__dict__)
       print('**********************************************************')
       core = core_env.step(
           state.core,
