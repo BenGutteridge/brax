@@ -232,12 +232,12 @@ def train(environment_fn: Callable[..., envs.Env],
 
   tmp_env_states = []
   for key in key_envs:
-    # first_state, step_fn = env.wrap(
-    #     core_env, key, extra_step_kwargs=extra_step_kwargs)
+    first_state, step_fn = env.wrap(
+        core_env, key, extra_step_kwargs=extra_step_kwargs)
     ## my attempt - stealing fro ppo ##
-    reset_fn = jax.jit(jax.vmap(core_env.reset))
-    first_state = reset_fn(key)
-    step_fn = step_fn = jax.jit(core_env.step)
+    # reset_fn = jax.jit(jax.vmap(core_env.reset))
+    # first_state = reset_fn(key)
+    # step_fn = step_fn = jax.jit(core_env.step)
     ## end my attempt ##
     tmp_env_states.append(first_state)
   first_state = jax.tree_multimap(lambda *args: jnp.stack(args),
