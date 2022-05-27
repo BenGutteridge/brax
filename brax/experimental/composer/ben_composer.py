@@ -463,6 +463,9 @@ def get_obs_dict_shape(env: Env):
 
 
 def create(env_name: str = 'piggy_in_the_middle_MA',
+           env_desc: Union[Dict[str, Any], Callable[..., Dict[str,
+                                                              Any]]] = None,
+           desc_edits: Dict[str, Any] = None,
            episode_length: int = 1000,
            action_repeat: int = 1,
            auto_reset: bool = True,
@@ -477,7 +480,7 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
       assert not kwargs, f'unused kwargs: {kwargs}'
     env_desc = {}
     env_desc = dict(**env_desc, **desc)
-    # env_desc = composer_utils.edit_desc(env_desc, desc_edits)
+    env_desc = composer_utils.edit_desc(env_desc, desc_edits)
     composer = Composer(**env_desc)
     env = ComponentEnv(composer=composer, env_desc=env_desc)
   else:
@@ -495,6 +498,9 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
 
 
 def create_fn(env_name: str = 'piggy_in_the_middle_MA',
+              env_desc: Union[Dict[str, Any], Callable[..., Dict[str,
+                                                              Any]]] = None,
+              desc_edits: Dict[str, Any] = None,
               episode_length: int = 1000,
               action_repeat: int = 1,
               auto_reset: bool = True,
@@ -504,6 +510,8 @@ def create_fn(env_name: str = 'piggy_in_the_middle_MA',
   return functools.partial(
       create,
       env_name=env_name,
+      env_desc=env_desc,
+      desc_edits=desc_edits,
       episode_length=episode_length,
       action_repeat=action_repeat,
       auto_reset=auto_reset,
