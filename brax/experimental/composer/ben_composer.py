@@ -83,6 +83,7 @@ from brax.experimental.composer.components import load_component
 from brax.experimental.composer.components import register_default_components
 from jax import numpy as jnp
 
+from brax.envs import piggy_in_the_middle_MA
 _envs = {
     'piggy_in_the_middle_MA': piggy_in_the_middle_MA.PITM_MA,
 }
