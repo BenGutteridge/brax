@@ -475,8 +475,9 @@ def create(env_name: str = 'piggy_in_the_middle_MA',
       desc = desc(**kwargs)
     else:
       assert not kwargs, f'unused kwargs: {kwargs}'
+    env_desc = {}
     env_desc = dict(**env_desc, **desc)
-    env_desc = composer_utils.edit_desc(env_desc, desc_edits)
+    # env_desc = composer_utils.edit_desc(env_desc, desc_edits)
     composer = Composer(**env_desc)
     env = ComponentEnv(composer=composer, env_desc=env_desc)
   else:
