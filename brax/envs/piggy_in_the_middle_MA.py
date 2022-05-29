@@ -68,9 +68,8 @@ class PITM_MA(env.Env):
     obs = self._get_obs(qp, info)
     zero = jp.zeros((1,1)) # consistent shapes
     # making sure size of reward is same as number of agents
-    reward, done = jnp.zeros((2,) + self.reward_shape)
-    if self.is_multiagent:  # multi-agent
-      done = jp.float32(jnp.any(done, axis=-1))  # ensure done is a scalar
+    reward = jnp.zeros((1,) + self.reward_shape)
+    done = jp.float32(0)  # ensure done is a scalar
 
     metrics = {
         'p1_ball_reward': zero,
