@@ -66,9 +66,9 @@ class PITM_MA(env.Env):
       qp.pos[-4] = jp.array([0, -15, 0])
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    zero = jp.zeros(1) # consistent shapes
+    zero = jp.float32(0) # consistent shapes
     # making sure size of reward is same as number of agents
-    reward = jnp.zeros((1,) + self.reward_shape)
+    reward = jnp.zeros(self.reward_shape)
     done = jp.float32(0)  # ensure done is a scalar
 
     metrics = {
@@ -251,19 +251,19 @@ class PITM_MA(env.Env):
     reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
-        p1_ball_reward=p1_ball_reward*jp.ones(1),
-        p2_ball_reward=p2_ball_reward*jp.ones(1),
-        p3_ball_reward=p3_ball_reward*jp.ones(1),
-        player_separation_reward=player_separation_reward*jp.ones(1),
-        out_of_bounds_reward=-1*out_of_bounds_cost*jp.ones(1),
-        piggy_ball_reward=piggy_ball_reward*jp.ones(1),
-        piggy_ball_static_reward=piggy_ball_static_reward*jp.ones(1),
-        piggy_touch_ball_reward=-1*piggy_touch_ball_cost*jp.ones(1),
-        ctrl_reward=-1*ctrl_cost*jp.ones(1),
-        contact_reward=-1*contact_cost*jp.ones(1),
-        survive_reward=survive_reward*jp.ones(1),
-        ball_thrust_x=ball_acc[0]*jp.ones(1),
-        ball_thrust_y=ball_acc[1]*jp.ones(1),
+        p1_ball_reward=p1_ball_reward,
+        p2_ball_reward=p2_ball_reward,
+        p3_ball_reward=p3_ball_reward,
+        player_separation_reward=player_separation_reward,
+        out_of_bounds_reward=-1*out_of_bounds_cost,
+        piggy_ball_reward=piggy_ball_reward,
+        piggy_ball_static_reward=piggy_ball_static_reward,
+        piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
+        ctrl_reward=-1*ctrl_cost,
+        contact_reward=-1*contact_cost,
+        survive_reward=survive_reward,
+        ball_thrust_x=ball_acc[0],
+        ball_thrust_y=ball_acc[1],
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
