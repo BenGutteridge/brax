@@ -49,6 +49,8 @@ class PITM_MA(env.Env):
               size=3),
   ))
     self.is_multiagent = True
+    self.reward_shape = (len(
+        self.group_action_shapes),)
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
@@ -64,7 +66,10 @@ class PITM_MA(env.Env):
       qp.pos[-4] = jp.array([0, -15, 0])
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    reward, done, zero = jp.zeros(3)
+    zero = jp.zeros(1)
+    # making sure size of reward is same as number of agents
+    reward, done = jnp.zeros((2,) + self.reward_shape)
+
     metrics = {
         'p1_ball_reward': zero,
         'p2_ball_reward': zero,
