@@ -66,11 +66,11 @@ class PITM_MA(env.Env):
       qp.pos[-4] = jp.array([0, -15, 0])
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    zero = jp.zeros(1)
+    zero = jp.zeros((1,1)) # consistent shapes
     # making sure size of reward is same as number of agents
     reward, done = jnp.zeros((2,) + self.reward_shape)
     if self.is_multiagent:  # multi-agent
-      done = jnp.any(done, axis=-1)  # ensure done is a scalar
+      done = jp.float32(jnp.any(done, axis=-1))  # ensure done is a scalar
 
     metrics = {
         'p1_ball_reward': zero,
@@ -249,6 +249,7 @@ class PITM_MA(env.Env):
               piggy_ball_reward + piggy_ball_static_reward - 
               piggy_touch_ball_cost - 
               ctrl_cost - contact_cost + survive_reward)
+    reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
         p1_ball_reward=p1_ball_reward,
