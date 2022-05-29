@@ -209,10 +209,10 @@ class PITM_MA(env.Env):
     player_separation_reward = p_dists * scale
 
     
-    # Large fixed cost for player (OR BALL) getting outside walls
+    # Large fixed cost for BALL getting outside walls
     fixed_cost, scale = 1000, 1
     out_of_bounds_cost = 0.
-    for pos in [p1_pos_after, p2_pos_after, p3_pos_after, ball_pos_after]:
+    for pos in [ball_pos_after]: #[p1_pos_after, p2_pos_after, p3_pos_after, ball_pos_after]: # for ball and players or just ball
       out_of_bounds_cost += jp.amax(jp.where(abs(pos) > 16, jp.float32(1), jp.float32(0)))
     out_of_bounds_cost *= fixed_cost * scale 
     done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
