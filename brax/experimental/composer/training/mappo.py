@@ -389,6 +389,10 @@ def train(environment_fn: Callable[..., envs.Env],
     key, key_perm, key_grad = jax.random.split(key, 3)
     permutation = jax.random.permutation(key_perm, data.obs.shape[1])
 
+    print('***\nInfo about data that then goes on to be rewards.')
+    print('Before `convert_data`:')
+    print('data: ', data, '\n')
+
     def convert_data(data, permutation):
       data = jnp.take(data, permutation, axis=1, mode='clip')
       data = jnp.reshape(data, [data.shape[0], num_minibatches, -1] +
@@ -397,6 +401,8 @@ def train(environment_fn: Callable[..., envs.Env],
       return data
 
     ndata = jax.tree_map(lambda x: convert_data(x, permutation), data)
+    print('After `convert_data`, jax.tree_map:')
+    print('ndata: ', ndata, '\n')
     u_ndata = jax.tree_map(lambda x: convert_data(x, permutation), udata)
     (optimizer_state, params, _), metrics = jax.lax.scan(
         update_model, (optimizer_state, params, key_grad), (ndata, u_ndata),
