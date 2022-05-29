@@ -69,6 +69,8 @@ class PITM_MA(env.Env):
     zero = jp.zeros(1)
     # making sure size of reward is same as number of agents
     reward, done = jnp.zeros((2,) + self.reward_shape)
+    if self.is_multiagent:  # multi-agent
+      done = jnp.any(done, axis=-1)  # ensure done is a scalar
 
     metrics = {
         'p1_ball_reward': zero,
