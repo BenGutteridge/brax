@@ -77,16 +77,6 @@ def compute_gae(truncation: jnp.ndarray,
   # Append bootstrapped value to get [v1, ..., v_t+1]
   values_t_plus_1 = jnp.concatenate(
       [values[1:], jnp.expand_dims(bootstrap_value, 0)], axis=0)
-  print('Printing everything:\n', 'truncation_mask:', truncation_mask, '\n',
-        'values_t_plus_1:', values_t_plus_1, '\n',
-        'rewards:', rewards, '\n',
-        'termination:', termination, '\n',
-        'discount:', discount, '\n',
-        # 'lambda_:', lambda_, '\n',
-        'values:', values, '\n',
-        # 'bootstrap_value:', bootstrap_value, '\n',
-        'truncation:', truncation, '\n',
-        )
   deltas = rewards + discount * (1 - termination) * values_t_plus_1 - values
   deltas *= truncation_mask
 
