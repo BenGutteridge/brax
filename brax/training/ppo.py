@@ -561,14 +561,21 @@ def make_inference_fn(observation_size, action_size, normalize_observations, **l
       observation_size, normalize_observations)
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=action_size)
-  policy_model, _ = networks.make_models(
-      parametric_action_distribution.param_size, 
-      observation_size,
-      pol_num_hidden_layers=layers["pol_num_hidden_layers"],          
-      pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
-      val_num_hidden_layers=layers["val_num_hidden_layers"],
-      val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
-      )
+  if layers:
+    policy_model, _ = networks.make_models(
+        parametric_action_distribution.param_size, 
+        observation_size,
+        pol_num_hidden_layers=layers["pol_num_hidden_layers"],          
+        pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
+        val_num_hidden_layers=layers["val_num_hidden_layers"],
+        val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
+        )
+  else:
+    policy_model, _ = networks.make_models(
+        parametric_action_distribution.param_size, 
+        observation_size,
+        )
+
 
   def inference_fn(params, obs, key):
     normalizer_params, policy_params = params
