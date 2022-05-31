@@ -246,8 +246,12 @@ class PITM(env.Env):
     """Observe ant body position and velocities."""
 
     #### OBSERVATIONS ####
-    all_body_pos = qp.pos[:-1,:2].flatten() # x,y positions of both players, ball and piggy (8,)
-    all_body_vel = qp.vel[:-1,:2].flatten() # x,y velocities of both players, ball and piggy (8,)
+    if self.walls:
+      num_objects_not_observed = 5 # ground + four walls
+    else:
+      num_objects_not_observed = 1 # ground
+    all_body_pos = qp.pos[:-num_objects_not_observed,:2].flatten() # x,y positions of all players, ball and piggy (10,)
+    all_body_vel = qp.vel[:-num_objects_not_observed,:2].flatten() # x,y velocities of all players, ball and piggy (10,)
     ball_ang  = qp.ang[0]                   # ball angular velocities (3,)
 
     return jp.concatenate([all_body_pos] + [all_body_vel] + [ball_ang])

@@ -36,15 +36,6 @@ import jax
 import jax.numpy as jnp
 import optax
 
-# stolen from mappo.py
-@flax.struct.dataclass
-class Agent:
-  parametric_action_distribution: distribution.ParametricDistribution
-  policy_model: Any
-  optimizer_state: Any
-  init_params: Any
-  grad_loss: Any
-
 def compute_gae(truncation: jnp.ndarray,
                 termination: jnp.ndarray,
                 rewards: jnp.ndarray,

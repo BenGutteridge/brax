@@ -231,7 +231,7 @@ class PITM_MA(env.Env):
     
     # Piggy reach ball, big cost, end episode
     scale = 1000.
-    eps = 1.21 # minimum distance between ball and piggy centres (~(1+root2)/2)
+    eps = 1.30 # minimum distance between ball and piggy centres ((1+root2)/2 + a bit)
     piggy_touch_ball_cost = (piggy_ball_dist_after < eps) * scale
     done = jp.where(piggy_ball_dist_after < eps, jp.float32(1), jp.float32(0)) # if, then, else
 
