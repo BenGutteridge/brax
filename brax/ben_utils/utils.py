@@ -1,7 +1,7 @@
 import brax
 import sys
 import numpy as np
-import jumpy as jp
+import brax.jumpy as jp
 from os.path import join
 
 
