@@ -4,9 +4,9 @@ import numpy as np
 from os.path import join
 
 
-def OLD_make_config(n_players=2, walls=False, output_path=False):
+def make_config(n_players=2, walls=False, output_path=False):
   body_idx, n = {}, 0
-  pitm = brax.Config(dt=0.05, substeps=20, dynamics_mode='pbd')
+  pitm = brax.Config(dt=0.10, substeps=20, dynamics_mode='pbd')
   ground = pitm.bodies.add(name='ground')
   body_idx['ground'] = n
   n += 1
@@ -20,8 +20,6 @@ def OLD_make_config(n_players=2, walls=False, output_path=False):
   n += 1
   cap = ball.colliders.add().capsule
   cap.radius, cap.length = 0.5, 1.0
-  # cap = ball.colliders.add().sphere
-  # cap.radius = 0.5
 
   # make piggy
   piggy = pitm.bodies.add(name='piggy', mass=1)
