@@ -10,7 +10,7 @@ def make_config(n_players=2,
                 output_path=False, 
                 frozen_players=False,
                 friction=0.,
-                player_radius=3.
+                player_radius=3.,
                 ball_init=[0.,0.],
                 ):
   body_idx, n = {}, 0
