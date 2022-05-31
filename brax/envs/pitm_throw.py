@@ -24,9 +24,10 @@ from typing import Dict, Any, Callable, Tuple, Optional, Union
 from jax import numpy as jnp
 
 
-class PITM_MA(env.Env):
+class PITM_Throw(env.Env):
+  # changed
   """
-  Experimenting with an env that has high accelerations but also speed caps.
+  An env that has stationary players that can launch ball *when nearby* at a constant velocity, continuous angle choice.
   """
 
   def __init__(self, legacy_spring=False, **kwargs):
