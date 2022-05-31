@@ -67,7 +67,7 @@ def make_config(n_players=2,
     wall_height = 6
     for i in range(1,5):
       wall = pitm.bodies.add(name='wall%d'%i)
-      body_idx['wall%d'%i] = n
+      body_idx['wall_%d'%i] = n
       n += 1
       wall.frozen.all = True
       wall_box = wall.colliders.add().box
@@ -86,6 +86,7 @@ def make_config(n_players=2,
 
   # default starting positions
   default_qp = pitm_sys.default_qp()
+  default_qp.pos[body_idx['piggy'],0] = 20  # move piggy init pos
   r = 3. # starting distance of each player from ball
   t = np.linspace(0, 2*np.pi, n_players+1)
   dx, dy = r*np.cos(t), r*np.sin(t)
