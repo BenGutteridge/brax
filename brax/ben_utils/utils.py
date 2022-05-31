@@ -3,7 +3,8 @@ import sys
 import numpy as np
 from os.path import join
 
-def make_config(n_players=2, walls=False, output_path=False):
+
+def OLD_make_config(n_players=2, walls=False, output_path=False):
   body_idx, n = {}, 0
   pitm = brax.Config(dt=0.05, substeps=20, dynamics_mode='pbd')
   ground = pitm.bodies.add(name='ground')
@@ -21,7 +22,6 @@ def make_config(n_players=2, walls=False, output_path=False):
   cap.radius, cap.length = 0.5, 1.0
   # cap = ball.colliders.add().sphere
   # cap.radius = 0.5
-
 
   # make piggy
   piggy = pitm.bodies.add(name='piggy', mass=1)
@@ -63,7 +63,6 @@ def make_config(n_players=2, walls=False, output_path=False):
         dims.x, dims.y, dims.z = wall_length/2, wall_thickness/2, wall_height/2
       else:
         dims.x, dims.y, dims.z = wall_thickness/2, wall_length/2, wall_height/2
-    
     
   pitm.gravity.z = -9.8
   pitm.friction = 0.1

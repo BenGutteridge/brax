@@ -36,7 +36,6 @@ import jax
 import jax.numpy as jnp
 import optax
 
-
 def compute_gae(truncation: jnp.ndarray,
                 termination: jnp.ndarray,
                 rewards: jnp.ndarray,
@@ -209,6 +208,10 @@ def train(
     reward_scaling=1.,
     progress_fn: Optional[Callable[[int, Dict[str, Any]], None]] = None,
     checkpoint_dir: Optional[str] = None,
+    pol_num_hidden_layers=4,          
+    pol_num_neurons_per_layer=32,
+    val_num_hidden_layers=5,
+    val_num_neurons_per_layer = 256,
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -257,7 +260,12 @@ def train(
 
   policy_model, value_model = networks.make_models(
       parametric_action_distribution.param_size,
-      core_env.observation_size)
+      core_env.observation_size,
+      pol_num_hidden_layers=pol_num_hidden_layers,          
+      pol_num_neurons_per_layer=pol_num_neurons_per_layer,
+      val_num_hidden_layers=val_num_hidden_layers,
+      val_num_neurons_per_layer=val_num_neurons_per_layer,
+      )
   key_policy, key_value = jax.random.split(key_models)
 
   optimizer = optax.adam(learning_rate=learning_rate)
@@ -494,14 +502,17 @@ def train(
       logging.info(metrics)
       current_step = int(training_state.normalizer_params[0][0]) * action_repeat
       if progress_fn:
-        progress_fn(current_step, metrics)
+        normalizer_params = jax.tree_map(lambda x: x[0], training_state.normalizer_params)
+        policy_params = jax.tree_map(lambda x: x[0], training_state.params['policy'])
+        params = normalizer_params, policy_params
+        progress_fn(current_step, metrics, params)
 
       if checkpoint_dir:
-        normalizer_params = jax.tree_map(lambda x: x[0],
-                                         training_state.normalizer_params)
-        policy_params = jax.tree_map(lambda x: x[0],
-                                     training_state.params['policy'])
-        params = normalizer_params, policy_params
+        # normalizer_params = jax.tree_map(lambda x: x[0],
+        #                                  training_state.normalizer_params)
+        # policy_params = jax.tree_map(lambda x: x[0],
+        #                              training_state.params['policy'])
+        # params = normalizer_params, policy_params
         path = os.path.join(checkpoint_dir, f'ppo_{current_step}.pkl')
         model.save_params(path, params)
 
@@ -535,14 +546,27 @@ def train(
   return (inference, params, metrics) # policy, policy params, saved training data
 
 
-def make_inference_fn(observation_size, action_size, normalize_observations):
+def make_inference_fn(observation_size, action_size, normalize_observations, **layers):
   """Creates params and inference function for the PPO agent."""
   _, obs_normalizer_apply_fn = normalization.make_data_and_apply_fn(
       observation_size, normalize_observations)
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=action_size)
-  policy_model, _ = networks.make_models(
-      parametric_action_distribution.param_size, observation_size)
+  if layers:
+    policy_model, _ = networks.make_models(
+        parametric_action_distribution.param_size, 
+        observation_size,
+        pol_num_hidden_layers=layers["pol_num_hidden_layers"],          
+        pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
+        val_num_hidden_layers=layers["val_num_hidden_layers"],
+        val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
+        )
+  else:
+    policy_model, _ = networks.make_models(
+        parametric_action_distribution.param_size, 
+        observation_size,
+        )
+
 
   def inference_fn(params, obs, key):
     normalizer_params, policy_params = params

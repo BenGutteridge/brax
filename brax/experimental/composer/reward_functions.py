@@ -227,3 +227,31 @@ def get_observers_from_reward_fns(reward_fn):
   """Get observers variable from reward_fn."""
   defaults = get_default_kwargs(reward_fn)
   return [v for _, v in sorted(defaults.items()) if isinstance(v, Observer)]
+
+#### CUSTOM REWARD FUNCTIONS -- BEN ####
+
+# #  copy from distance reward but make reward fixed based on being within some radius
+# def go_stay_reward(action: jnp.ndarray,
+#                     obs_dict: Dict[str, jnp.ndarray],
+#                     obs1: Union[Observer, jnp.ndarray],
+#                     target_goal: Union[Observer, jnp.ndarray], 
+#                     max_dist: float = 1e8,
+#                     min_dist: float = 0,
+#                     norm_kwargs: Dict[str, Any] = None):
+#   """Fixed big reward for being near to target"""
+#   del action
+#   norm_kwargs = norm_kwargs or {}
+#   obs1 = index_obs_dict(obs_dict, obs1)
+#   target_goal = index_obs_dict(obs_dict, target_goal)
+#   ndim = max(obs1.ndim, target_goal.ndim)
+#   obs1 = obs1.reshape((1,) * (ndim - obs1.ndim) + obs1.shape)
+#   target_goal = target_goal.reshape((1,) * (ndim - target_goal.ndim) + target_goal.shape)
+#   delta = obs1 - target_goal
+#   dist = jnp.linalg.norm(delta, axis=-1, **norm_kwargs)
+#   # instead of clipping, terminate
+#   # dist = jnp.clip(dist, a_min=min_dist, a_max=max_dist)
+#   done = jnp.zeros_like(dist)
+#   done = jnp.where(dist < min_dist, x=jnp.ones_like(done), y=done)
+#   done = jnp.where(dist > max_dist, x=jnp.ones_like(done), y=done)
+#   reward = jnp.where(dist < 0.5, x=100*jnp.ones_like(dist), y=jnp.zeros_like(dist))
+#   return reward, done

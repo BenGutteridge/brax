@@ -19,8 +19,12 @@ from brax import jumpy as jp
 from brax.envs import env
 from brax.jumpy import safe_norm as norm
 
+from collections import OrderedDict as odict
+from typing import Dict, Any, Callable, Tuple, Optional, Union
+from jax import numpy as jnp
 
-class PITM(env.Env):
+
+class PITM_MA(env.Env):
   """
   Experimenting with an env that has high accelerations but also speed caps.
   """
@@ -32,9 +36,24 @@ class PITM(env.Env):
       self.walls = False
     config = _SYSTEM_CONFIG_WALLS if self.walls else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
+    # adaptations to MAPPO
+    self.group_action_shapes = odict(dict(
+      p1=dict(indices=(0,1,8),
+              shape=(3,),
+              size=3),
+      p2=dict(indices=(2,3,7),
+              shape=(3,),
+              size=3),
+      p3=dict(indices=(4,5,6),
+              shape=(3,),
+              size=3),
+  ))
+    self.is_multiagent = True
+    self.reward_shape = (len(
+        self.group_action_shapes),)
 
   def reset(self, rng: jp.ndarray) -> env.State:
-    """Resets the environment to an initial state."""
+    """Resets the environment to an initial state. (same every time)"""
     qp = self.sys.default_qp()
     qp.pos[1,0] = 20                  # move piggy init pos
     qp.pos[2,1] = 3                   # move p1 init pos
@@ -47,7 +66,11 @@ class PITM(env.Env):
       qp.pos[-4] = jp.array([0, -15, 0])
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    reward, done, zero = jp.zeros(3)
+    zero = jp.float32(0) # consistent shapes
+    # making sure size of reward is same as number of agents
+    reward = jnp.zeros(self.reward_shape)
+    done = jp.float32(0)  # ensure done is a scalar
+
     metrics = {
         'p1_ball_reward': zero,
         'p2_ball_reward': zero,
@@ -65,8 +88,14 @@ class PITM(env.Env):
     }
     return env.State(qp, obs, reward, done, metrics)
 
-  def step(self, state: env.State, action: jp.ndarray) -> env.State:
+  def step(self, 
+           state: env.State, 
+           action: jp.ndarray,
+           normalizer_params: Dict[str, jnp.ndarray] = None,
+           extra_params: Dict[str, Dict[str, jnp.ndarray]] = None ) -> env.State:
     """Run one timestep of the environment's dynamics."""
+
+    del normalizer_params, extra_params
 
     # Generating piggy action
     ball_pos_before = state.qp.pos[0,:2]
@@ -180,10 +209,10 @@ class PITM(env.Env):
     player_separation_reward = p_dists * scale
 
     
-    # Large fixed cost for player (OR BALL) getting outside walls
+    # Large fixed cost for BALL getting outside walls
     fixed_cost, scale = 1000, 1
     out_of_bounds_cost = 0.
-    for pos in [p1_pos_after, p2_pos_after, p3_pos_after, ball_pos_after]:
+    for pos in [ball_pos_after]: #[p1_pos_after, p2_pos_after, p3_pos_after, ball_pos_after]: # for ball and players or just ball
       out_of_bounds_cost += jp.amax(jp.where(abs(pos) > 16, jp.float32(1), jp.float32(0)))
     out_of_bounds_cost *= fixed_cost * scale 
     done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
@@ -202,7 +231,7 @@ class PITM(env.Env):
     
     # Piggy reach ball, big cost, end episode
     scale = 1000.
-    eps = 1.21 # minimum distance between ball and piggy centres (~(1+root2)/2)
+    eps = 1.30 # minimum distance between ball and piggy centres ((1+root2)/2 + a bit)
     piggy_touch_ball_cost = (piggy_ball_dist_after < eps) * scale
     done = jp.where(piggy_ball_dist_after < eps, jp.float32(1), jp.float32(0)) # if, then, else
 
@@ -219,6 +248,7 @@ class PITM(env.Env):
               piggy_ball_reward + piggy_ball_static_reward - 
               piggy_touch_ball_cost - 
               ctrl_cost - contact_cost + survive_reward)
+    reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
         p1_ball_reward=p1_ball_reward,

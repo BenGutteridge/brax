@@ -184,7 +184,7 @@ def train(environment_fn: Callable[..., envs.Env],
           policy_params: Optional[Dict[str, jnp.ndarray]] = None,
           value_params: Optional[Dict[str, jnp.ndarray]] = None,
           extra_params: Optional[Dict[str, Dict[str, jnp.ndarray]]] = None,
-          extra_step_kwargs: bool = True,
+          extra_step_kwargs: bool = False, # True originally
           extra_loss_update_ratios: Optional[Dict[str, float]] = None,
           extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
                                                       jnp.ndarray]]] = None):
