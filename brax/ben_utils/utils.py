@@ -1,18 +1,18 @@
 import brax
 import sys
 import numpy as np
+import jumpy as jp
 from os.path import join
 
 
-def make_config(n_players=2, walls=False, output_path=False):
+def make_config(n_players=2, 
+                walls=False, 
+                output_path=False, 
+                frozen_players=False,
+                friction=0.,
+                ):
   body_idx, n = {}, 0
   pitm = brax.Config(dt=0.10, substeps=20, dynamics_mode='pbd')
-  ground = pitm.bodies.add(name='ground')
-  body_idx['ground'] = n
-  n += 1
-  ground.frozen.all = True
-  plane = ground.colliders.add().plane
-  plane.SetInParent()  # for setting an empty oneof
 
   # make ball
   ball = pitm.bodies.add(name='ball', mass=1)
@@ -33,23 +33,38 @@ def make_config(n_players=2, walls=False, output_path=False):
   thrust.SetInParent()
 
   # make players
+  players = []
   for i in range(1,n_players+1):
-    player = pitm.bodies.add(name='p%d'%i, mass=1)
+    p_str = 'p%d'%i
+    players.append(p_str)
+    player = pitm.bodies.add(name=p_str, mass=1)
     body_idx['p%d'%i] = n
     n += 1
-    cap = player.colliders.add().capsule
+    box = player.colliders.add().box
+    l = 1.0
+    dims = box.halfsize
+    dims.x, dims.y, dims.z = l/2, l/2, l/2
     cap.radius, cap.length = 0.5, 1
-    # add force (3D)
-    thrust = pitm.forces.add(name='p%d_thrust'%i, body='p%d'%i, strength=1.0).thruster
-    # twist = pitm.forces.add(name='p%d_thrust'%i, body='p%d'%i, strength=1.0).twister
-    thrust.SetInParent()
-    # twist.SetInParent()
+    if frozen_players:
+      player.frozen.all = True
+    else:
+      # add force (3D) since players can move around
+      thrust = pitm.forces.add(name='p%d_thrust'%i, body='p%d'%i, strength=1.0).thruster
+      thrust.SetInParent()
+
+  # make ground
+  ground = pitm.bodies.add(name='ground')
+  body_idx['ground'] = n
+  n += 1
+  ground.frozen.all = True
+  plane = ground.colliders.add().plane
+  plane.SetInParent()  # for setting an empty oneof
 
   if walls:
     # square walls, 30mx30m, 1m thick, 6m tall
-    wall_height = 6
-    wall_thickness = 1
     wall_length = 30
+    wall_thickness = 0.5
+    wall_height = 6
     for i in range(1,5):
       wall = pitm.bodies.add(name='wall%d'%i)
       body_idx['wall%d'%i] = n
@@ -63,7 +78,7 @@ def make_config(n_players=2, walls=False, output_path=False):
         dims.x, dims.y, dims.z = wall_thickness/2, wall_length/2, wall_height/2
     
   pitm.gravity.z = -9.8
-  pitm.friction = 0.1
+  pitm.friction = friction
   pitm.elasticity = 1.
   pitm.angular_damping = -1.0
 
@@ -71,18 +86,16 @@ def make_config(n_players=2, walls=False, output_path=False):
 
   # default starting positions
   default_qp = pitm_sys.default_qp()
-  r = 4. # starting distance of each player from ball
+  r = 3. # starting distance of each player from ball
   t = np.linspace(0, 2*np.pi, n_players+1)
   dx, dy = r*np.cos(t), r*np.sin(t)
-  default_qp.pos[body_idx['piggy']] += np.array([8., 0., 0.])
   for i in range(n_players):
     default_qp.pos[body_idx['p1']+i] += np.array([dx[i], dy[i], 0.])
-  
   if walls:
-    default_qp.pos[-1] += np.array([15, 0, 0])
-    default_qp.pos[-2] += np.array([-15, 0, 0])
-    default_qp.pos[-3] += np.array([0, 15, 0])
-    default_qp.pos[-4] += np.array([0, -15, 0])
+    default_qp.pos[-1] = jp.array([15, 0, 0])
+    default_qp.pos[-2] = jp.array([-15, 0, 0])
+    default_qp.pos[-3] = jp.array([0, 15, 0])
+    default_qp.pos[-4] = jp.array([0, -15, 0])
 
   if output_path:
       original_stdout = sys.stdout # Save a reference to the original standard output

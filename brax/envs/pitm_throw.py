@@ -25,7 +25,6 @@ from jax import numpy as jnp
 
 
 class PITM_Throw(env.Env):
-  # changed
   """
   An env that has stationary players that can launch ball *when nearby* at a constant velocity, continuous angle choice.
   """
