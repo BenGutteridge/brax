@@ -139,7 +139,13 @@ def update_best_params(episode_reward, num_steps, params, metrics, output_path):
   model.save_params(join(path, 'metrics'), metrics)
   return path
 
-def visualize_trajectory(jits, params, len_traj=20000, seed=0, output_path=None, rewards_plot=True):
+def visualize_trajectory(jits, 
+                         params, 
+                         len_traj=20000, 
+                         seed=0, 
+                         output_path=None, 
+                         rewards_plot=True, 
+                         do_not_plot=[]):
   """
   Visualize the trajectory of the system.
   """
@@ -161,7 +167,6 @@ def visualize_trajectory(jits, params, len_traj=20000, seed=0, output_path=None,
   html.save_html(render_path, env.sys, [s.qp for s in rollout])
 
   if rewards_plot:
-    print('Plotting reward')
     r_keys = list(state.metrics.keys())
     r_plots = state.metrics # will write over
     for key in r_keys:
@@ -176,10 +181,14 @@ def visualize_trajectory(jits, params, len_traj=20000, seed=0, output_path=None,
     r_keys.append('overall_reward')
     # rewards
     fig, ax = plt.subplots(figsize=(12,8))
+    legend = []
     for key in r_keys:
-      data = r_plots.pop(key)
-      ax.plot(np.linspace(0,len(data)/20, len(data)), data)
-    ax.legend(r_keys)
+      if key not in do_not_plot:
+        data = r_plots.pop(key)
+        legend.append(key)
+        ax.plot(np.linspace(0,len(data)/20, len(data)), data)
+        print(key, data[-1])
+    ax.legend(legend)
     fig_path = output_path+'_rewards_seed=%02d.jpg'%seed if output_path else \
                '/content/tmp/rewards_seed=%02d.jpg'%seed 
     fig.savefig(fig_path)
