@@ -113,3 +113,14 @@ def make_config(n_players=2,
           sys.stdout = original_stdout # Reset the standard output to its original value
 
   return pitm, pitm_sys, default_qp
+
+
+def save_config_txt(config, output_path):
+  """
+  Save the config to a text file.
+  """
+  original_stdout = sys.stdout
+  with open(join(output_path, 'config.txt'), 'w') as f:
+    sys.stdout = f
+    print(config)
+    sys.stdout = original_stdout # Reset the standard output to its original value
