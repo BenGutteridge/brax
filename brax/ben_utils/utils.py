@@ -22,6 +22,8 @@ def make_config(n_players=2,
   n += 1
   cap = ball.colliders.add().capsule
   cap.radius, cap.length = 0.5, 1.0
+  thrust = pitm.forces.add(name='ball_thrust', body='ball', strength=1.0).thruster
+  thrust.SetInParent()
 
   # make piggy
   piggy = pitm.bodies.add(name='piggy', mass=1)
