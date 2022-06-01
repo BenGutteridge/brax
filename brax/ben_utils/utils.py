@@ -2,7 +2,10 @@ import brax
 import sys
 import numpy as np
 import brax.jumpy as jp
+import os
 from os.path import join
+from brax.io import model
+
 
 
 def make_config(n_players=2, 
@@ -124,3 +127,11 @@ def save_config_txt(config, output_path):
     sys.stdout = f
     print(config)
     sys.stdout = original_stdout # Reset the standard output to its original value
+
+def update_best_params(episode_reward, num_steps, params, metrics, output_path):
+  label = 'ep=%.2e_R=%.2e' % (num_steps, episode_reward)
+  label = label[:3] + label[7:11] + 'x' + label[3:7] + label[11:] # list files in time order
+  dir = join(output_path, label)
+  os.mkdir(dir)
+  model.save_params(join(dir, 'params_' + label), params)
+  model.save_params(join(dir, 'metrics_', label), metrics)
