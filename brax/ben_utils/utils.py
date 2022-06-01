@@ -187,7 +187,10 @@ def visualize_trajectory(jits,
       if key not in do_not_plot:
         data = r_plots.pop(key)
         legend.append(key)
-        ax.plot(np.linspace(0,len(data)/20, len(data)), data)
+        if key == 'overall_reward':
+          ax.plot(np.linspace(0,len(data)/20, len(data)), data, '-')
+        else:
+          ax.plot(np.linspace(0,len(data)/20, len(data)), data)
         print(key, data[-1])
     ax.legend(legend)
     fig_path = output_path+'_rewards_seed=%02d.jpg'%seed if output_path else \
