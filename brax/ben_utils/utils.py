@@ -131,7 +131,8 @@ def save_config_txt(config, output_path):
 def update_best_params(episode_reward, num_steps, params, metrics, output_path):
   label = 'ep=%.2e_R=%.2e' % (num_steps, episode_reward)
   label = label[:3] + label[7:11] + 'x' + label[3:7] + label[11:] # list files in time order
-  dir = join(output_path, label)
-  os.mkdir(dir)
-  model.save_params(join(dir, 'params'), params)
-  model.save_params(join(dir, 'metrics'), metrics)
+  path = join(output_path, label)
+  os.mkdir(path)
+  model.save_params(join(path, 'params'), params)
+  model.save_params(join(path, 'metrics'), metrics)
+  return path
