@@ -188,7 +188,7 @@ def visualize_trajectory(jits,
         data = r_plots.pop(key)
         legend.append(key)
         if key == 'overall_reward':
-          ax.plot(np.linspace(0,len(data)/20, len(data)), data, '-')
+          ax.plot(np.linspace(0,len(data)/20, len(data)), data, '--')
         else:
           ax.plot(np.linspace(0,len(data)/20, len(data)), data)
         print(key, data[-1])
