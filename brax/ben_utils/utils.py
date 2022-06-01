@@ -134,7 +134,8 @@ def update_best_params(episode_reward, num_steps, params, metrics, output_path):
   label = 'ep=%.2e_R=%.2e' % (num_steps, episode_reward)
   label = label[:3] + label[7:11] + 'x' + label[3:7] + label[11:] # list files in time order
   path = join(output_path, label)
-  os.mkdir(path)
+  if not os.path.exists(path):
+    os.mkdir(path)
   model.save_params(join(path, 'params'), params)
   model.save_params(join(path, 'metrics'), metrics)
   return path
