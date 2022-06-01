@@ -1,10 +1,12 @@
 import brax
+import jax
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 import brax.jumpy as jp
 import os
 from os.path import join
-from brax.io import model
+from brax.io import model, html
 
 
 
@@ -136,3 +138,52 @@ def update_best_params(episode_reward, num_steps, params, metrics, output_path):
   model.save_params(join(path, 'params'), params)
   model.save_params(join(path, 'metrics'), metrics)
   return path
+
+def visualize_trajectory(jits, params, len_traj=20000, seed=0, output_path=None, rewards_plot=True):
+  """
+  Visualize the trajectory of the system.
+  """
+  (env, jit_env_reset, jit_env_step, jit_inference_fn) = jits
+  rollout = []
+  rng = jax.random.PRNGKey(seed=seed)
+  state = jit_env_reset(rng=rng)
+
+  for _ in range(len_traj):
+    rollout.append(state)
+    act_rng, rng = jax.random.split(rng)
+    act = jit_inference_fn(params, state.obs, act_rng)
+    state = jit_env_step(state, act)
+    if state.done: # end traj if traj ends
+      break
+
+  render_path = join(output_path, 'render_seed=%02d.html'%seed) if output_path \
+                else '/content/tmp/render_seed=%02d.html'%seed 
+  html.save_html(render_path, env.sys, [s.qp for s in rollout])
+
+  if rewards_plot:
+    print('Plotting reward')
+    r_keys = list(state.metrics.keys())
+    r_plots = state.metrics # will write over
+    for key in r_keys:
+      r_plots[key] = []
+    r_plots['overall_reward'] = []
+
+    for state in rollout:
+      for key in r_keys:
+        r_plots[key].append(state.metrics[key])
+      r_plots['overall_reward'].append(state.reward)
+
+    r_keys.append('overall_reward')
+    # rewards
+    fig, ax = plt.subplots(figsize=(12,8))
+    for key in r_keys:
+      data = r_plots.pop(key)
+      ax.plot(np.linspace(0,len(data)/20, len(data)), data)
+    ax.legend(r_keys)
+    fig_path = output_path+'_rewards_seed=%02d.jpg'%seed if output_path else \
+               '/content/tmp/rewards_seed=%02d.jpg'%seed 
+    fig.savefig(fig_path)
+    # fig.savefig(fig_path[:-3] + 'pdf')
+    return fig_path, render_path
+  
+  return render_path
