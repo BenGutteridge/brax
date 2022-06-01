@@ -120,14 +120,14 @@ def make_config(n_players=2,
   return pitm, pitm_sys, default_qp
 
 
-def save_config_txt(config, output_path):
+def save_print_as_txt(var, filename, output_path):
   """
   Save the config to a text file.
   """
   original_stdout = sys.stdout
-  with open(join(output_path, 'config.txt'), 'w') as f:
+  with open(join(output_path, filename+'.txt'), 'w') as f:
     sys.stdout = f
-    print(config)
+    print(var)
     sys.stdout = original_stdout # Reset the standard output to its original value
 
 def update_best_params(episode_reward, num_steps, params, metrics, output_path):
