@@ -130,7 +130,14 @@ def make_config(n_players=2,
     count += 1
   group_action_shapes = odict(adict)
 
-  return pitm, pitm_sys, default_qp, group_action_shapes
+  # squash together extra useful stuff
+  kwargs = dict(
+      body_idx=body_idx,
+      n_players=n_players,
+      group_action_shapes=group_action_shapes,
+  )
+
+  return pitm, pitm_sys, default_qp, kwargs
 
 
 def save_print_as_txt(var, filename, output_path):
