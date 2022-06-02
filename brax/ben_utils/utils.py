@@ -7,12 +7,13 @@ import brax.jumpy as jp
 import os
 from os.path import join
 from brax.io import model, html
+from collections import OrderedDict as odict
 
 
 
 def make_config(n_players=2, 
                 walls=False, 
-                output_path=False, 
+                output_path=False, # saves as a string to 'config.py'
                 frozen_players=False,
                 friction=0.,
                 player_radius=3.,
@@ -116,8 +117,20 @@ def make_config(n_players=2,
           '\n\nbody_idx = ', body_idx,
           '\n\nn_players = %d'%n_players)
           sys.stdout = original_stdout # Reset the standard output to its original value
+        
+  # make group_action_shapes
+  actions_per_player = 1
+  adict, count = {}, 0
+  for i in players:
+    adict[i] = dict(
+        indices=tuple(np.arange(count*actions_per_player, (count+1)*actions_per_player)),
+        shape=(actions_per_player,),
+        size=actions_per_player,
+        )
+    count += 1
+  group_action_shapes = odict(adict)
 
-  return pitm, pitm_sys, default_qp
+  return pitm, pitm_sys, default_qp, group_action_shapes
 
 
 def save_print_as_txt(var, filename, output_path):
