@@ -32,14 +32,15 @@ class PITM_Throw(env.Env):
 
   def __init__(self, **kwargs):    
     # make config
-    config, _, self.default_qp, args = make_config(n_players=2, 
+    _, _, self.default_qp, args = make_config(n_players=2, 
                                                   walls=True, 
                                                   frozen_players=True,
-                                                  output_path=kwargs.pop('config_path'),
+                                                  output_path='.',
                                                   friction=0.,
                                                   player_radius=3.,
                                                   ball_init=[0.,0.], # hard coded - change later
                 )
+    from config import _SYSTEM_CONFIG as config
     super().__init__(config=config, **kwargs)
     # adaptations to MAPPO
     self.idx=args['body_idx'],
