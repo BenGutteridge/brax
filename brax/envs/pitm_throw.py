@@ -30,11 +30,12 @@ class PITM_Throw(env.Env):
   An env that has stationary players that can launch ball *when nearby* at a constant velocity, continuous angle choice.
   """
 
-  def __init__(self, legacy_spring=False, **kwargs):    
+  def __init__(self, **kwargs):    
     # make config
     config, _, self.default_qp, args = make_config(n_players=2, 
                                                   walls=True, 
                                                   frozen_players=True,
+                                                  output_path=kwargs.pop('config_path'),
                                                   friction=0.,
                                                   player_radius=3.,
                                                   ball_init=[0.,0.], # hard coded - change later
