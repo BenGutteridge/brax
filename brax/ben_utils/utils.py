@@ -76,7 +76,7 @@ def make_config(n_players=2,
     wall_thickness = 0.5
     wall_height = 6
     for i in range(1,5):
-      wall = pitm.bodies.add(name='wall%d'%i)
+      wall = pitm.bodies.add(name='wall%d'%i, mass=10)
       body_idx['wall_%d'%i] = n
       n += 1
       wall.frozen.all = True
