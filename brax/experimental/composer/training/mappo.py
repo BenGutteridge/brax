@@ -297,6 +297,7 @@ def train(environment_fn: Callable[..., envs.Env],
       actions[k] = agent.parametric_action_distribution.sample(
           logits, key_sample)
     print("Offending line is:\n'actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))'\nobs.shape[:-1]: ", obs.shape[:-1])
+    input()
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
     actions = data_utils.fill_array(actions, actions_arr, action_shapes)
     nstate = eval_step_fn(state, actions, normalizer_params, extra_params)
