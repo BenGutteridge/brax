@@ -288,12 +288,15 @@ def train(environment_fn: Callable[..., envs.Env],
   def do_one_step_eval(carry, unused_target_t):
     state, policy_params, normalizer_params, extra_params, key = carry
     key, key_sample = jax.random.split(key)
+    print('state.core.obs: ', state.core.obs)
     obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
+    print('obs (after normalizer_fn): ', obs)
     actions = odict()
     for i, (k, agent) in enumerate(agents.items()):
       logits = agent.policy_model.apply(policy_params[i], obs)
       actions[k] = agent.parametric_action_distribution.sample(
           logits, key_sample)
+    print("Offending line is:\n'actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))'\nobs.shape[:-1]: ", obs.shape[:-1])
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
     actions = data_utils.fill_array(actions, actions_arr, action_shapes)
     nstate = eval_step_fn(state, actions, normalizer_params, extra_params)
