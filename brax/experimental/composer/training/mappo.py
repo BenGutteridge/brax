@@ -300,6 +300,7 @@ def train(environment_fn: Callable[..., envs.Env],
     print('(action_size,): ', (action_size,))
     print('sum: ', obs.shape[:-1] + (action_size,), type(obs.shape[:-1] + (action_size,)))
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
+    input()
     actions = data_utils.fill_array(actions, actions_arr, action_shapes)
     nstate = eval_step_fn(state, actions, normalizer_params, extra_params)
     return (nstate, policy_params, normalizer_params, extra_params, key), ()
