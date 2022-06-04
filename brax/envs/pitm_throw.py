@@ -92,11 +92,11 @@ class PITM_Throw(env.Env):
     num_actions_per_player = 2 # x,y acc
     force_mult = 25.
     ball_acc = jp.zeros(2) # x, y
-    for player in range(self.n_players):
-      player_pos = state.qp.pos[self.idx[player],:2]
+    for i in range(self.n_players):
+      player_pos = state.qp.pos[self.idx['p%d'%i],:2]
       player_ball_dist = norm(player_pos - ball_pos_before)
-      acc_x = action[num_actions_per_player * player] * (1/player_ball_dist**2) * force_mult
-      acc_y = action[num_actions_per_player * player + 1] * (1/player_ball_dist**2) * force_mult
+      acc_x = action[num_actions_per_player * i] * (1/player_ball_dist**2) * force_mult
+      acc_y = action[num_actions_per_player * i + 1] * (1/player_ball_dist**2) * force_mult
       ball_acc += jnp.array([acc_x, acc_y])
     
     # ball drag
