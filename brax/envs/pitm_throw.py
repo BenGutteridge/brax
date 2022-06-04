@@ -43,8 +43,8 @@ class PITM_Throw(env.Env):
     from config import _SYSTEM_CONFIG as config
     super().__init__(config=config, **kwargs)
     # adaptations to MAPPO
-    self.idx=args['body_idx'],
-    self.n_players=args['n_players'],
+    self.idx=args['body_idx']
+    self.n_players=args['n_players']
     self.group_action_shapes=args['group_action_shapes']
     self.is_multiagent = True
     self.reward_shape = (len(
