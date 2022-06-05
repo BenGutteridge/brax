@@ -17,7 +17,7 @@ def make_config(n_players=2,
                 frozen_players=False,
                 friction=0.,
                 player_radius=3.,
-                ball_init=[0.,0.],
+                ball_init='near_p1',
                 ):
   body_idx, n = {}, 0
   pitm = brax.Config(dt=0.10, substeps=20, dynamics_mode='pbd')
@@ -96,13 +96,16 @@ def make_config(n_players=2,
 
   # default starting positions
   default_qp = pitm_sys.default_qp()
-  default_qp.pos[body_idx['ball'],:2] = ball_init
   default_qp.pos[body_idx['piggy'],0] = 20  # move piggy init pos
   r = player_radius # starting distance of each player from ball
   t = np.linspace(-np.pi, np.pi, n_players+1)
   dx, dy = r*np.cos(t), r*np.sin(t)
   for i in range(n_players):
     default_qp.pos[body_idx['p1']+i] += np.array([dx[i], dy[i], 0.])
+  if ball_init is 'near_p1':
+    default_qp[body_idx['ball'],0] = default_qp[body_idx['p1'],0] - 1
+  else:
+    default_qp.pos[body_idx['ball'],:2] = ball_init
   if walls:
     default_qp.pos[-1] = jp.array([15, 0, 0])
     default_qp.pos[-2] = jp.array([-15, 0, 0])

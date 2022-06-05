@@ -32,14 +32,13 @@ class PITM_Throw(env.Env):
 
   def __init__(self, **kwargs):    
     # make config
-    _, _, self.default_qp, args = make_config(n_players=2, 
-                                                  walls=True, 
-                                                  frozen_players=True,
-                                                  output_path='.',
-                                                  friction=0.,
-                                                  player_radius=3.,
-                                                  ball_init=[0.,0.], # hard coded - change later
-                )
+    _, _, self.default_qp, args = make_config(n_players=3, 
+                                              walls=True, 
+                                              frozen_players=True,
+                                              output_path='.',
+                                              friction=0.,
+                                              player_radius=7.,
+    )
     from config import _SYSTEM_CONFIG as config
     super().__init__(config=config, **kwargs)
     # adaptations to MAPPO
@@ -100,7 +99,7 @@ class PITM_Throw(env.Env):
       ball_acc += jnp.array([acc_x, acc_y])
     
     # ball drag
-    visc = 1. # 1.81e-5 # viscosity of air
+    visc = 0.01 # 1.81e-5 # viscosity of air
     ball_r = self.sys.config.bodies[0].colliders[0].capsule.radius
     ball_drag = 6 * jp.pi * ball_r * visc * state.qp.vel[0,:2]
     ball_acc -= ball_drag
