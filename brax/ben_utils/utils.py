@@ -103,7 +103,7 @@ def make_config(n_players=2,
   for i in range(n_players):
     default_qp.pos[body_idx['p1']+i] += np.array([dx[i], dy[i], 0.])
   if ball_init is 'near_p1':
-    default_qp[body_idx['ball'],0] = default_qp[body_idx['p1'],0] - 1
+    default_qp.pos[body_idx['ball'], 0] = default_qp[body_idx['p1'],0] - 1
   else:
     default_qp.pos[body_idx['ball'],:2] = ball_init
   if walls:
