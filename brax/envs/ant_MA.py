@@ -17,14 +17,20 @@
 import brax
 from brax import jumpy as jp
 from brax.envs import env
+from brax.ben_utils.utils import make_group_action_shapes
+from jax import numpy as jnp
 
-
-class Ant(env.Env):
+class Ant_MA(env.Env):
   """Trains an ant to run in the +x direction."""
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
+    self.n_legs, self.actuators_per_leg = 4, 2
+    players = ['leg_%d' % i for i in range(self.n_legs)]
+    self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_leg)
+    self.is_multiagent = True
+    self.reward_shape = (len(self.group_action_shapes),)
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
@@ -35,7 +41,8 @@ class Ant(env.Env):
     qp = self.sys.default_qp(joint_angle=qpos, joint_velocity=qvel)
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    reward, done, zero = jp.zeros(3)
+    done, zero = jp.zeros(2)
+    reward = jnp.zeros(self.reward_shape)
     metrics = {
         'reward_ctrl_cost': zero,
         'reward_contact_cost': zero,
@@ -57,6 +64,7 @@ class Ant(env.Env):
                     jp.sum(jp.square(jp.clip(info.contact.vel, -1, 1))))
     survive_reward = jp.float32(1)
     reward = forward_reward - ctrl_cost - contact_cost + survive_reward
+    reward *= jp.ones_like(state.reward)
 
     done = jp.where(qp.pos[0, 2] < 0.2, x=jp.float32(1), y=jp.float32(0))
     done = jp.where(qp.pos[0, 2] > 1.0, x=jp.float32(1), y=done)
@@ -67,6 +75,10 @@ class Ant(env.Env):
         reward_survive=survive_reward)
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
+
+  @property
+  def action_size(self):
+    return self.n_legs * self.actuators_per_leg
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
