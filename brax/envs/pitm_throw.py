@@ -184,7 +184,8 @@ class PITM_Throw(env.Env):
 
     #### OBSERVATIONS ####
     all_body_pos = qp.pos[:2,:2].flatten() # x,y positions of ball and piggy (4,)
+    player_poses = qp.pos[2:2+self.n_players, :2].flatten() # x,y positions of players (n_players*2)
     all_body_vel = qp.vel[:2,:2].flatten() # x,y velocities of ball and piggy (4,)
     # ball_ang  = qp.ang[0]                   # ball angular velocities (3,)
 
-    return jp.concatenate([all_body_pos] + [all_body_vel])
+    return jp.concatenate([all_body_pos] + [all_body_vel] + [player_poses])
