@@ -76,8 +76,6 @@ class PITM_Throw(env.Env):
 
     del normalizer_params, extra_params
 
-    print('Action: ', action, action.shape)
-
     # Generating piggy action
     ball_pos_before = state.qp.pos[self.idx['ball'],:2]
     piggy_pos_before = state.qp.pos[self.idx['piggy'],:2]
@@ -99,9 +97,6 @@ class PITM_Throw(env.Env):
       player_ball_dist = norm(player_pos - ball_pos_before)
       acc_x = action[num_actions_per_player * i] * (1/player_ball_dist**2) * force_mult
       acc_y = action[num_actions_per_player * i + 1] * (1/player_ball_dist**2) * force_mult
-      print('acc_x index: ', num_actions_per_player*i)
-      print('acc_y index: ', num_actions_per_player*i+1)
-      print(action[num_actions_per_player * i], action[num_actions_per_player * i + 1])
       ball_acc += jnp.array([acc_x, acc_y])
     
     # ball drag
