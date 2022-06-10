@@ -128,12 +128,20 @@ class PITM_Throw(env.Env):
     piggy_touch_ball_cost = (piggy_ball_dist_after < eps) * scale
     done = jp.where(piggy_ball_dist_after < eps, jp.float32(1), jp.float32(0)) # end if piggy touches ball
 
+    # Large fixed cost for BALL getting outside walls
+    fixed_cost, scale = 1000, 1
+    out_of_bounds_cost = 0.
+    for pos in [ball_pos_after]:
+      out_of_bounds_cost += jp.amax(jp.where(abs(pos) > 16, jp.float32(1), jp.float32(0)))
+    out_of_bounds_cost *= fixed_cost * scale 
+    done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
+
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
     survive_reward = jp.float32(1)
 
     # total reward
-    costs = ctrl_cost + piggy_touch_ball_cost
+    costs = ctrl_cost + piggy_touch_ball_cost + out_of_bounds_cost
     reward = survive_reward - costs
     reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
