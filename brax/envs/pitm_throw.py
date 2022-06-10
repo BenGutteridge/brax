@@ -60,12 +60,12 @@ class PITM_Throw(env.Env):
     reward = jnp.zeros(self.reward_shape)
     done = jp.float32(0)  # ensure done is a scalar
     self.player_poses = [qp.pos[self.idx['p%d'%i],:2] for i in range(1, self.n_players+1)]
+    self.previous_player_idx = self.idx['p1']
 
     metrics = {
         'piggy_touch_ball_reward': zero,
         'ctrl_reward': zero,
         'survive_reward': zero,
-        'previous_player_idx': self.idx['p1'],  # starts near p1
         'num_passes': zero,
         'ball_passing_reward': zero,
     }
@@ -116,8 +116,9 @@ class PITM_Throw(env.Env):
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
 
-    # New nearest ball
-    nearest_player_idx = jnp.argmin(jp.abs(jp.array(self.player_poses) - ball_pos_before))
+    # New nearest player
+    ball_pos_after = qp.pos[self.idx['ball'],:2]
+    nearest_player_idx = jnp.argmin(norm(jp.array(self.player_poses) - ball_pos_after, axis=1))
 
     #### REWARDS ####
     # convention: all terms positive, subtract terms labelled 'cost', add 'reward'
@@ -130,7 +131,6 @@ class PITM_Throw(env.Env):
     scale = 1000.
     eps = 1.30 # minimum distance between ball and piggy centres ((1+root2)/2 + a bit)
     piggy_pos_after = qp.pos[self.idx['piggy'],:2]
-    ball_pos_after = qp.pos[self.idx['ball'],:2]
     piggy_ball_dist_after = norm(ball_pos_after - piggy_pos_after)
     piggy_touch_ball_cost = (piggy_ball_dist_after < eps) * scale
     done = jp.where(piggy_ball_dist_after < eps, jp.float32(1), jp.float32(0)) # end if piggy touches ball
@@ -145,12 +145,14 @@ class PITM_Throw(env.Env):
 
     # Reward for 'ball passed' - nearest player changing
     scale = 100 * state.metrics['num_passes']
-    ball_passed_reward = jp.where(nearest_player_idx != state.metrics['previous_player_idx'], jp.float32(1), jp.float32(0))
+    ball_passed_reward = jp.where(nearest_player_idx != self.previous_player_idx, jp.float32(1), jp.float32(0))
     ball_passed_reward *= scale
 
     # Reward for ball passing from current player to one of the others
     scale = 20 * state.metrics['num_passes']
-    ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in self.player_poses])
+    other_player_poses = [self.player_poses[i] for i in range(self.n_players) if i != self.previous_player_idx]
+    ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in other_player_poses])
+
     # +ve is towards player
     ball_passing_reward = jnp.max(ball_player_deltas) / self.sys.config.dt * scale
 
@@ -167,7 +169,6 @@ class PITM_Throw(env.Env):
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
         ctrl_reward=-1*ctrl_cost,
         survive_reward=survive_reward,
-        previous_player_idx=nearest_player_idx,
         num_passes=state.metrics['num_passes'] + jp.where(ball_passed_reward > 0, jp.float32(1), jp.float32(0)),
         ball_passing_reward=ball_passing_reward,
     )
