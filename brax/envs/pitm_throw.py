@@ -58,6 +58,7 @@ class PITM_Throw(env.Env):
     # making sure size of reward is same as number of agents
     reward = jnp.zeros(self.reward_shape)
     done = jp.float32(0)  # ensure done is a scalar
+    self.player_poses = [qp.pos[self.idx['p%d'%i],:2] for i in range(1, self.n_players+1)]
 
     metrics = {
         'piggy_touch_ball_reward': zero,
@@ -74,6 +75,8 @@ class PITM_Throw(env.Env):
     """Run one timestep of the environment's dynamics."""
 
     del normalizer_params, extra_params
+
+    print('Action: ', action, action.shape)
 
     # Generating piggy action
     ball_pos_before = state.qp.pos[self.idx['ball'],:2]
@@ -93,6 +96,7 @@ class PITM_Throw(env.Env):
     ball_acc = jp.zeros(2) # x, y
     for i in range(1, self.n_players+1):
       player_pos = state.qp.pos[self.idx['p%d'%i],:2]
+      player_poses.append(player_pos)
       player_ball_dist = norm(player_pos - ball_pos_before)
       acc_x = action[num_actions_per_player * i] * (1/player_ball_dist**2) * force_mult
       acc_y = action[num_actions_per_player * i + 1] * (1/player_ball_dist**2) * force_mult
