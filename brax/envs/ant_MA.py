@@ -19,6 +19,7 @@ from brax import jumpy as jp
 from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes
 from jax import numpy as jnp
+from brax.jumpy import safe_norm as norm
 
 class Ant_MA(env.Env):
   """Trains an ant to run in the +x direction."""
@@ -56,9 +57,10 @@ class Ant_MA(env.Env):
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
 
-    x_before = state.qp.pos[0, 0]
-    x_after = qp.pos[0, 0]
-    forward_reward = (x_after - x_before) / self.sys.config.dt
+    # rewards moving any dist away from origin, not just +x
+    dist_before = norm(state.qp.pos[0])
+    dist_after = norm(qp.pos[0, 0])
+    forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
                     jp.sum(jp.square(jp.clip(info.contact.vel, -1, 1))))
