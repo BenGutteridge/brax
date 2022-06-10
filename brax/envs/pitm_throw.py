@@ -19,6 +19,7 @@ from brax import jumpy as jp
 from brax.envs import env
 from brax.jumpy import safe_norm as norm
 from brax.ben_utils.utils import make_config
+import copy
 
 from collections import OrderedDict as odict
 from typing import Dict, Any, Callable, Tuple, Optional, Union
@@ -65,7 +66,8 @@ class PITM_Throw(env.Env):
         'ctrl_reward': zero,
         'survive_reward': zero,
         'previous_player_idx': self.idx['p1'],  # starts near p1
-        'num_passes': zero
+        'num_passes': zero,
+        'ball_passing_reward': zero,
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -141,10 +143,18 @@ class PITM_Throw(env.Env):
     # out_of_bounds_cost *= fixed_cost * scale 
     # done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
 
-    # Reward for 'ball passing'
+    # Reward for 'ball passed' - nearest player changing
     scale = 100 * state.metrics['num_passes']
-    ball_pass_reward = jp.where(nearest_player_idx != state.metrics['previous_player_idx'], jp.float32(1), jp.float32(0))
-    ball_pass_reward *= scale
+    ball_passed_reward = jp.where(nearest_player_idx != state.metrics['previous_player_idx'], jp.float32(1), jp.float32(0))
+    ball_passed_reward *= scale
+
+    # Reward for ball passing from current player to one of the others
+    scale = 20
+    other_player_poses = self.player_poses
+    other_player_poses.pop(state.metrics['previous_player_idx'])
+    ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in other_player_poses])
+    # +ve is towards player
+    ball_passing_reward = jnp.max(ball_player_deltas) / self.sys.config.dt * scale
 
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
@@ -152,7 +162,7 @@ class PITM_Throw(env.Env):
 
     # total reward
     costs = ctrl_cost + piggy_touch_ball_cost + out_of_bounds_cost
-    reward = ball_pass_reward + survive_reward - costs
+    reward = ball_passed_reward + ball_passing_reward + survive_reward - costs
     reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
@@ -160,7 +170,8 @@ class PITM_Throw(env.Env):
         ctrl_reward=-1*ctrl_cost,
         survive_reward=survive_reward,
         previous_player_idx=nearest_player_idx,
-        num_passes=state.metrics['num_passes'] + jp.where(ball_pass_reward > 0, jp.float32(1), jp.float32(0)),
+        num_passes=state.metrics['num_passes'] + jp.where(ball_passed_reward > 0, jp.float32(1), jp.float32(0)),
+        ball_passing_reward=ball_passing_reward,
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
