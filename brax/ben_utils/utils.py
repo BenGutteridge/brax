@@ -9,7 +9,16 @@ from os.path import join
 from brax.io import model, html
 from collections import OrderedDict as odict
 
-
+def make_group_action_shapes(players, actions_per_player):
+  group_action_shapes, count = {}, 0
+  for i in players:
+    group_action_shapes[i] = dict(
+        indices=tuple(np.arange(count*actions_per_player, (count+1)*actions_per_player)),
+        shape=(actions_per_player,),
+        size=actions_per_player,
+        )
+    count += 1
+  return odict(group_action_shapes)
 
 def make_config(n_players=2, 
                 walls=False, 
@@ -123,15 +132,7 @@ def make_config(n_players=2,
         
   # make group_action_shapes
   actions_per_player = 1
-  adict, count = {}, 0
-  for i in players:
-    adict[i] = dict(
-        indices=tuple(np.arange(count*actions_per_player, (count+1)*actions_per_player)),
-        shape=(actions_per_player,),
-        size=actions_per_player,
-        )
-    count += 1
-  group_action_shapes = odict(adict)
+  group_action_shapes = make_group_action_shapes(players, actions_per_player)
 
   # squash together extra useful stuff
   kwargs = dict(
