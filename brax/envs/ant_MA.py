@@ -27,11 +27,14 @@ class Ant_MA(env.Env):
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
-    self.n_agents, self.actuators_per_agent = 2, 4
-    players = ['agent_%d' % i for i in range(self.n_agents)]
-    self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
-    self.is_multiagent = True
-    self.reward_shape = (len(self.group_action_shapes),)
+    is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    if is_multiagent:
+      self.n_agents, self.actuators_per_agent = 2, 4
+      players = ['agent_%d' % i for i in range(self.n_agents)]
+      self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
+      self.is_multiagent = True
+      self.reward_shape = (len(self.group_action_shapes),)
+    else: self.reward_shape = 1
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
