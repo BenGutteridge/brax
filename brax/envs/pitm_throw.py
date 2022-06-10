@@ -149,17 +149,8 @@ class PITM_Throw(env.Env):
     ball_passed_reward *= scale
 
     # Reward for ball passing from current player to one of the others
-    scale = 20
-    # other_player_poses = list_except_idx(, list=self.player_poses)
-    x = []
-    idx = state.metrics['previous_player_idx']
-    for i in range(idx):
-      x.append(self.player_poses[i])
-    for i in range(idx+1, len(list)):
-      x.append(self.player_poses[i])
-    other_player_poses = x
-
-    ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in other_player_poses])
+    scale = 20 * state.metrics['num_passes']
+    ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in self.player_poses])
     # +ve is towards player
     ball_passing_reward = jnp.max(ball_player_deltas) / self.sys.config.dt * scale
 
