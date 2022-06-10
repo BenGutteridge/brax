@@ -136,10 +136,10 @@ class PITM_Throw(env.Env):
     # Large fixed cost for BALL getting outside walls
     fixed_cost, scale = 1000, 1
     out_of_bounds_cost = 0.
-    for pos in [ball_pos_after]:
-      out_of_bounds_cost += jp.amax(jp.where(abs(pos) > 16, jp.float32(1), jp.float32(0)))
-    out_of_bounds_cost *= fixed_cost * scale 
-    done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
+    # for pos in [ball_pos_after]:
+    #   out_of_bounds_cost += jp.amax(jp.where(abs(pos) > 16, jp.float32(1), jp.float32(0)))
+    # out_of_bounds_cost *= fixed_cost * scale 
+    # done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
 
     # Reward for 'ball passing'
     scale = 100 * state.metrics['num_passes']
