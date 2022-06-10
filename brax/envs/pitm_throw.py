@@ -64,6 +64,7 @@ class PITM_Throw(env.Env):
         'piggy_touch_ball_reward': zero,
         'ctrl_reward': zero,
         'survive_reward': zero,
+        'previous_player_idx': self.idx['p1'],  # starts near p1
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -112,6 +113,9 @@ class PITM_Throw(env.Env):
     qp, info = self.sys.step(state.qp, act)
     obs = self._get_obs(qp, info)
 
+    # New nearest ball
+    nearest_player_idx = jnp.argmin(jp.abs(jp.array(self.player_poses) - ball_pos_before))
+
     #### REWARDS ####
     # convention: all terms positive, subtract terms labelled 'cost', add 'reward'
     # terms:
@@ -136,19 +140,27 @@ class PITM_Throw(env.Env):
     out_of_bounds_cost *= fixed_cost * scale 
     done = jp.where(out_of_bounds_cost > 1, jp.float32(1), jp.float32(0)) # if, then, else
 
+    # Reward for 'ball passing'
+    scale = 100 * state.metrics['num_passes']
+    if nearest_player_idx != state.metrics['previous_player_idx']:
+      ball_pass_reward = scale
+    else:
+        ball_pass_reward = 0.
+
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
     survive_reward = jp.float32(1)
 
     # total reward
     costs = ctrl_cost + piggy_touch_ball_cost + out_of_bounds_cost
-    reward = survive_reward - costs
+    reward = ball_pass_reward + survive_reward - costs
     reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
         piggy_touch_ball_reward=-1*piggy_touch_ball_cost,
         ctrl_reward=-1*ctrl_cost,
         survive_reward=survive_reward,
+        previous_player_idx=nearest_player_idx,
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
