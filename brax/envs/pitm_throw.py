@@ -150,7 +150,7 @@ class PITM_Throw(env.Env):
 
     # Reward for ball passing from current player to one of the others
     scale = 20
-    other_player_poses = list_except_idx(, list=self.player_poses)
+    # other_player_poses = list_except_idx(, list=self.player_poses)
     x = []
     idx = state.metrics['previous_player_idx']
     for i in range(idx):
