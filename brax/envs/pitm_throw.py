@@ -65,6 +65,7 @@ class PITM_Throw(env.Env):
         'ctrl_reward': zero,
         'survive_reward': zero,
         'previous_player_idx': self.idx['p1'],  # starts near p1
+        'num_passes': zero
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -161,6 +162,7 @@ class PITM_Throw(env.Env):
         ctrl_reward=-1*ctrl_cost,
         survive_reward=survive_reward,
         previous_player_idx=nearest_player_idx,
+        num_passes=state.metrics['num_passes'] + jp.where(ball_pass_reward > 0, jp.float32(1), jp.float32(0)),
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
