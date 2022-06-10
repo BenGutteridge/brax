@@ -62,7 +62,7 @@ class Ant_MA(env.Env):
 
     # rewards moving any dist away from origin, not just +x
     dist_before = norm(state.qp.pos[0])
-    dist_after = norm(qp.pos[0, 0])
+    dist_after = norm(qp.pos[0])
     forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
