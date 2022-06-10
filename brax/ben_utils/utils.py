@@ -224,3 +224,11 @@ def visualize_trajectory(jits,
     return fig_path, render_path
   
   return render_path
+
+def list_except_idx(idx, list):
+  x = []
+  for i in range(idx):
+    x.append(list[i])
+  for i in range(idx+1, len(list)):
+    x.append(list[i])
+  return x
