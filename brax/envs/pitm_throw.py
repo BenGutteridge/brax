@@ -143,10 +143,8 @@ class PITM_Throw(env.Env):
 
     # Reward for 'ball passing'
     scale = 100 * state.metrics['num_passes']
-    if nearest_player_idx != state.metrics['previous_player_idx']:
-      ball_pass_reward = scale
-    else:
-        ball_pass_reward = 0.
+    ball_pass_reward = jp.where(nearest_player_idx != state.metrics['previous_player_idx'], jp.float32(1), jp.float32(0))
+    ball_pass_reward *= scale
 
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
