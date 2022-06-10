@@ -26,9 +26,9 @@ class Ant_MA(env.Env):
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
-    self.n_legs, self.actuators_per_leg = 4, 2
-    players = ['leg_%d' % i for i in range(self.n_legs)]
-    self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_leg)
+    self.n_agents, self.actuators_per_agent = 2, 4
+    players = ['agent_%d' % i for i in range(self.n_agents)]
+    self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
     self.is_multiagent = True
     self.reward_shape = (len(self.group_action_shapes),)
 
@@ -78,7 +78,7 @@ class Ant_MA(env.Env):
 
   @property
   def action_size(self):
-    return self.n_legs * self.actuators_per_leg
+    return self.n_agents * self.actuators_per_agent
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
