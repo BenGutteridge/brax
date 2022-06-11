@@ -222,9 +222,9 @@ def visualize_trajectory(jits,
                 else '/content/tmp/rewards_seed=%02d.jpg'%seed 
     fig.savefig(fig_path)
     # fig.savefig(fig_path[:-3] + 'pdf')
-    return fig_path, render_path
+    return rollout, render_path, fig_path
   
-  return render_path
+  return rollout, render_path
 
 def list_except_idx(idx, list):
   x = []
