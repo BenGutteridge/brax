@@ -207,14 +207,15 @@ def visualize_trajectory(jits,
     # rewards
     fig, ax = plt.subplots(figsize=(12,8))
     legend = []
+    num_plots_per_sec = int(1/env.sys.config.dt)
     for key in r_keys:
       if key not in do_not_plot:
         data = r_plots.pop(key)
         legend.append(key)
         if key == 'overall_reward':
-          ax.plot(np.linspace(0,len(data)/20, len(data)), data, '--')
+          ax.plot(np.linspace(0,len(data)/num_plots_per_sec, len(data)), data, '--')
         else:
-          ax.plot(np.linspace(0,len(data)/20, len(data)), data)
+          ax.plot(np.linspace(0,len(data)/num_plots_per_sec, len(data)), data)
         print(key, data[-1])
     ax.legend(legend)
     fig_path = join(output_path, 'rewards_seed=%02d.jpg'%seed) if output_path \
