@@ -68,6 +68,7 @@ class PITM_Throw(env.Env):
         'survive_reward': zero,
         'num_passes': zero,
         'ball_passing_reward': zero,
+        'agg_ball_passing_reward': zero,
     }
     return env.State(qp, obs, reward, done, metrics)
 
@@ -152,9 +153,21 @@ class PITM_Throw(env.Env):
     scale = 20 * state.metrics['num_passes']
     other_player_poses = [self.player_poses[i] for i in range(self.n_players) if i != self.previous_player_idx]
     ball_player_deltas = jp.array([norm(ball_pos_before - pos) - norm(ball_pos_after - pos) for pos in other_player_poses])
-
     # +ve is towards player
     ball_passing_reward = jnp.max(ball_player_deltas) / self.sys.config.dt * scale
+
+    # Aggressively reward shaped ball passing
+    scale = 20
+    """
+    1. Get pose of 'next' player
+    2. Get vector from ball towards next player
+    3. Give a reward for action based on inner product with vector from ball to next player
+    """
+    next_player_idx = (self.previous_player_idx + 1) % self.n_players
+    next_player_pose = self.player_poses[next_player_idx]
+    ball_next_player_vec = next_player_pose - ball_pos_before
+    ball_next_player_vec /= norm(ball_next_player_vec)
+    agg_ball_passing_reward = jnp.dot(ball_next_player_vec, ball_act) * scale
 
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
@@ -162,7 +175,7 @@ class PITM_Throw(env.Env):
 
     # total reward
     costs = ctrl_cost + piggy_touch_ball_cost + out_of_bounds_cost
-    reward = ball_passed_reward + ball_passing_reward + survive_reward - costs
+    reward = agg_ball_passing_reward + ball_passing_reward + ball_passed_reward + survive_reward - costs
     reward *= jp.ones_like(state.reward) # make sure it's the right shape - DecPOMDP so same reward for all agents
 
     state.metrics.update(
@@ -171,6 +184,7 @@ class PITM_Throw(env.Env):
         survive_reward=survive_reward,
         num_passes=state.metrics['num_passes'] + jp.where(ball_passed_reward > 0, jp.float32(1), jp.float32(0)),
         ball_passing_reward=ball_passing_reward,
+        agg_ball_passing_reward=agg_ball_passing_reward,
     )
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)

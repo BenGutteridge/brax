@@ -565,7 +565,7 @@ def make_inference_fn(
                                      observation_size)
     agents[k] = (parametric_action_distribution, policy_model)
 
-  def inference_fn(params, obs, key):
+  def inference_fn(params, obs, key): # key is basically seed, I think
     normalizer_params, policy_params = params['normalizer'], params['policy']
     obs = obs_normalizer_apply_fn(normalizer_params, obs)
     actions = odict()
