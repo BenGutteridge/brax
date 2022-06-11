@@ -167,7 +167,7 @@ class PITM_Throw(env.Env):
     next_player_pose = self.player_poses[next_player_idx]
     ball_next_player_vec = next_player_pose - ball_pos_before
     ball_next_player_vec /= norm(ball_next_player_vec)
-    agg_ball_passing_reward = jnp.dot(ball_next_player_vec, ball_act) * scale
+    agg_ball_passing_reward = jnp.dot(ball_next_player_vec, ball_acc) * scale
 
     # standard stuff -- contact cost, survive reward, control cost
     ctrl_cost = 0. # .5 * jp.sum(jp.square(action)) # let's encourage movement
