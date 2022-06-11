@@ -157,7 +157,7 @@ class PITM_Throw(env.Env):
     ball_passing_reward = jnp.max(ball_player_deltas) / self.sys.config.dt * scale
 
     # Aggressively reward shaped ball passing
-    scale = 20
+    scale = 1
     """
     1. Get pose of 'next' player
     2. Get vector from ball towards next player
