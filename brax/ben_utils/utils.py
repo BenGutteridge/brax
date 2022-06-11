@@ -217,8 +217,8 @@ def visualize_trajectory(jits,
           ax.plot(np.linspace(0,len(data)/20, len(data)), data)
         print(key, data[-1])
     ax.legend(legend)
-    fig_path = output_path+'_rewards_seed=%02d.jpg'%seed if output_path else \
-               '/content/tmp/rewards_seed=%02d.jpg'%seed 
+    fig_path = join(output_path, 'rewards_seed=%02d.html'%seed) if output_path \
+                else '/content/tmp/rewards_seed=%02d.html'%seed 
     fig.savefig(fig_path)
     # fig.savefig(fig_path[:-3] + 'pdf')
     return fig_path, render_path
