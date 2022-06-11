@@ -221,7 +221,7 @@ def visualize_trajectory(jits,
     fig_path = join(output_path, 'rewards_seed=%02d.jpg'%seed) if output_path \
                 else '/content/tmp/rewards_seed=%02d.jpg'%seed 
     fig.savefig(fig_path)
-    # fig.savefig(fig_path[:-3] + 'pdf')
+    fig.savefig(fig_path[:-3] + 'pdf')
     return rollout, render_path, fig_path
   
   return rollout, render_path
