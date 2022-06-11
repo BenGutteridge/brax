@@ -33,7 +33,7 @@ class PITM_Throw(env.Env):
 
   def __init__(self, **kwargs):    
     # make config
-    _, _, self.default_qp, args = make_config(n_players=3, 
+    _, _, self.default_qp, args = make_config(n_players=5, 
                                               walls=kwargs.pop('walls', True),
                                               frozen_players=True,
                                               output_path='.',
