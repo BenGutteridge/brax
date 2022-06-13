@@ -41,7 +41,7 @@ class Ant_MA(env.Env):
     """Resets the environment to an initial state."""
     rng, rng1, rng2, rng_dir = jp.random_split(rng, 4)
     # random reward direction
-    self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) if not self.any_dir else None
+    self.reward_dir = jp.random_uniform(rng_dir, (1,), -jp.pi, jp.pi) if not self.any_dir else None
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
