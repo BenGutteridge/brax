@@ -40,6 +40,9 @@ class Ant_MA(env.Env):
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
     rng, rng1, rng2, rng_dir = jp.random_split(rng, 4)
+    # random reward direction
+    self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) if not self.any_dir else None
+    # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
     qvel = jp.random_uniform(rng2, (self.sys.num_joint_dof,), -.1, .1)
@@ -47,10 +50,6 @@ class Ant_MA(env.Env):
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
-    if self.any_dir:
-      self.reward_dir = None
-    else:
-      self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) # random reward direction
     reward = jnp.zeros(self.reward_shape)
     metrics = {
         'reward_ctrl_cost': zero,
