@@ -28,6 +28,7 @@ class Ant_MA(env.Env):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    self.any_dir = kwargs.pop('any_dir', False)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 2, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
@@ -38,7 +39,7 @@ class Ant_MA(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    rng, rng1, rng2 = jp.random_split(rng, 3)
+    rng, rng1, rng2, rng_dir = jp.random_split(rng, 4)
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
     qvel = jp.random_uniform(rng2, (self.sys.num_joint_dof,), -.1, .1)
@@ -46,6 +47,7 @@ class Ant_MA(env.Env):
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
+    if not self.any_dir: self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) # random reward direction
     reward = jnp.zeros(self.reward_shape)
     metrics = {
         'reward_ctrl_cost': zero,
@@ -60,10 +62,16 @@ class Ant_MA(env.Env):
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
 
-    # rewards moving any dist away from origin, not just +x
-    dist_before = norm(state.qp.pos[0])
-    dist_after = norm(qp.pos[0])
-    forward_reward = (dist_after - dist_before) / self.sys.config.dt
+    if self.any_dir:
+      # rewards moving any dist away from origin, not just +x
+      dist_before = norm(state.qp.pos[0])
+      dist_after = norm(qp.pos[0])
+      forward_reward = (dist_after - dist_before) / self.sys.config.dt
+    else:
+      # rewards moving in direction of self.reward_dir
+      delta = qp.pos[0] - state.qp.pos[0]
+      reward_dir_vec = jp.array([jnp.cos(self.reward_dir), jnp.sin(self.reward_dir)])
+      forward_reward = jnp.dot(delta, reward_dir_vec) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
                     jp.sum(jp.square(jp.clip(info.contact.vel, -1, 1))))
@@ -110,7 +118,10 @@ class Ant_MA(env.Env):
     # flatten bottom dimension
     cfrc = [jp.reshape(x, x.shape[:-2] + (-1,)) for x in cfrc]
 
-    return jp.concatenate(qpos + qvel + cfrc)
+    observe_reward_dir = []
+    if not self.any_dir: observe_reward_dir.append(self.reward_dir*jp.ones(1))
+
+    return jp.concatenate(qpos + qvel + cfrc + observe_reward_dir)
 
 
 _SYSTEM_CONFIG = """
