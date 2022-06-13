@@ -47,7 +47,10 @@ class Ant_MA(env.Env):
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
-    if not self.any_dir: self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) # random reward direction
+    if self.any_dir:
+      self.reward_dir = None
+    else:
+      self.reward_dir = jp.random_uniform(rng_dir, (1,), -180, 180) # random reward direction
     reward = jnp.zeros(self.reward_shape)
     metrics = {
         'reward_ctrl_cost': zero,
