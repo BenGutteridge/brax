@@ -63,7 +63,7 @@ class Ant_MA_v2(env.Env):
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info, self.reward_dir)
     delta = qp.pos[0] - state.qp.pos[0]
-    reward_dir_vec = jp.array([jnp.cos(self.reward_dir), jnp.sin(self.reward_dir)])
+    reward_dir_vec = jp.concatenate([jnp.cos(self.reward_dir)] + [jnp.sin(self.reward_dir)])
     forward_reward = jnp.dot(delta, reward_dir_vec) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
