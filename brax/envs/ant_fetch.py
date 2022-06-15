@@ -20,6 +20,8 @@ import brax
 from brax import jumpy as jp
 from brax import math
 from brax.envs import env
+from brax.ben_utils.utils import make_group_action_shapes
+from jax import numpy as jnp
 
 
 class AntFetch(env.Env):
@@ -28,6 +30,14 @@ class AntFetch(env.Env):
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
+    is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    if is_multiagent:
+      self.n_agents, self.actuators_per_agent = 2, 4
+      players = ['agent_%d' % i for i in range(self.n_agents)]
+      self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
+      self.is_multiagent = True
+      self.reward_shape = (len(self.group_action_shapes),)
+    else: self.reward_shape = 1
     self.target_idx = self.sys.body.index['Target']
     self.torso_idx = self.sys.body.index['$ Torso']
     self.target_radius = 2
@@ -40,7 +50,8 @@ class AntFetch(env.Env):
     qp = qp.replace(pos=pos)
     info = self.sys.info(qp)
     obs = self._get_obs(qp, info)
-    reward, done, zero = jp.zeros(3)
+    done, zero = jp.zeros(2)
+    reward = jnp.zeros(self.reward_shape)
     metrics = {
         'hits': zero,
         'weightedHits': zero,
@@ -79,6 +90,7 @@ class AntFetch(env.Env):
     weighted_hit = target_hit * torso_facing
 
     reward = torso_height + moving_to_target + torso_is_up # + weighted_hit
+    reward *= jp.ones_like(state.reward)
 
     state.metrics.update(
         hits=target_hit,
@@ -94,6 +106,10 @@ class AntFetch(env.Env):
     qp = qp.replace(pos=pos)
     state.info.update(rng=rng)
     return state.replace(qp=qp, obs=obs, reward=reward)
+
+  @property
+  def action_size(self):
+    return self.n_agents * self.actuators_per_agent
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Egocentric observation of target and the ant's body."""
