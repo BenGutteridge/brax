@@ -293,9 +293,13 @@ def train(environment_fn: Callable[..., envs.Env],
     state, policy_params, normalizer_params, extra_params, key = carry
     key, key_sample = jax.random.split(key)
     obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
+    obs_p2 = obs_normalizer_apply_fn(normalizer_params, state.core.obs_p2)
     actions = odict()
     for i, (k, agent) in enumerate(agents.items()):
-      logits = agent.policy_model.apply(policy_params[i], obs)
+      if i==0:
+        logits = agent.policy_model.apply(policy_params[i], obs)
+      else: # p2 / follower
+        logits = agent.policy_model.apply(policy_params[i], obs_p2)
       actions[k] = agent.parametric_action_distribution.sample(
           logits, key_sample)
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
@@ -318,16 +322,20 @@ def train(environment_fn: Callable[..., envs.Env],
     state, normalizer_params, policy_params, extra_params, key = carry
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
+    normalized_obs_p2 = obs_normalizer_apply_fn(normalizer_params, state.core.obs_p2)
     logits, actions, postprocessed_actions = [], [], odict()
     for i, (k, agent) in enumerate(agents.items()):
-      logits += [agent.policy_model.apply(policy_params[i], normalized_obs)]
+      if i==0:
+        logits += [agent.policy_model.apply(policy_params[i], normalized_obs)]
+      else:
+        logits += [agent.policy_model.apply(policy_params[i], normalized_obs_p2)]
       actions += [
           agent.parametric_action_distribution.sample_no_postprocessing(
               logits[-1], key_sample)
       ]
       postprocessed_actions[
           k] = agent.parametric_action_distribution.postprocess(actions[-1])
-    postprocessed_actions_arr = jnp.zeros(normalized_obs.shape[:-1] +
+    postprocessed_actions_arr = jnp.zeros(normalized_obs.shape[:-1] + # might be a problem
                                           (action_size,))
     postprocessed_actions = data_utils.fill_array(postprocessed_actions,
                                                   postprocessed_actions_arr,
@@ -337,6 +345,7 @@ def train(environment_fn: Callable[..., envs.Env],
     return (nstate, normalizer_params, policy_params, extra_params,
             key), ppo.StepData(
                 obs=state.core.obs,
+                obs_p2=state.core.obs_p2, # does this do anything?
                 rewards=state.core.reward,
                 dones=state.core.done,
                 truncation=state.core.info['truncation'],
