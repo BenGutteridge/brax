@@ -22,7 +22,7 @@ from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
 
 class Ant_MA_v2(env.Env):
-  """Trains an ant to run in the +x direction."""
+  """Trains an ant to run in a random direction direction [BROKEN CURRENTLY] """
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
@@ -40,7 +40,7 @@ class Ant_MA_v2(env.Env):
     """Resets the environment to an initial state."""
     rng, rng1, rng2, rng_dir = jp.random_split(rng, 4)
     # random reward direction
-    self.reward_dir = jp.random_uniform(rng_dir, (1,), -jp.pi, jp.pi)
+    self.reward_dir = jp.random_uniform(rng_dir, (1,), -jp.pi, jp.pi) # not allowed to do this - leak
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
