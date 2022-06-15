@@ -39,6 +39,7 @@ from brax.envs import piggy_in_the_middle
 from brax.envs import piggy_in_the_middle_MA
 from brax.envs import pitm_throw
 from brax.envs import ant_MA
+from brax.envs import ant_MA_v2
 from brax.envs import wrappers
 from brax.envs.env import Env, State, Wrapper
 import gym
@@ -65,6 +66,7 @@ _envs = {
     'piggy_in_the_middle_MA': piggy_in_the_middle_MA.PITM_MA,
     'pitm_throw': pitm_throw.PITM_Throw,
     'ant_MA': ant_MA.Ant_MA,
+    'ant_MA_v2': ant_MA_v2.Ant_MA_v2,
 }
 
 
