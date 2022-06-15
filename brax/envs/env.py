@@ -29,6 +29,7 @@ class State:
   """Environment state for training and inference."""
   qp: brax.QP
   obs: jp.ndarray
+  obs_p2: jp.ndarray # Hopefully this doesn't interfere with anything else
   reward: jp.ndarray
   done: jp.ndarray
   metrics: Dict[str, jp.ndarray] = struct.field(default_factory=dict)
