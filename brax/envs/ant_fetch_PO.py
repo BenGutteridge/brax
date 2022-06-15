@@ -61,11 +61,12 @@ class AntFetchPO(env.Env):
         'torsoHeight': zero
     }
     info = {'rng': rng}
-    return env.State(qp, obs, reward, done, metrics, info)
+    return env.State(qp, obs, obs_p2, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
+    obs_p2 = self._get_obs_p2(qp, info)
 
     # small reward for torso moving towards target
     torso_delta = qp.pos[self.torso_idx] - state.qp.pos[self.torso_idx]
@@ -106,7 +107,7 @@ class AntFetchPO(env.Env):
     pos = jp.index_update(qp.pos, self.target_idx, target)
     qp = qp.replace(pos=pos)
     state.info.update(rng=rng)
-    return state.replace(qp=qp, obs=obs, reward=reward)
+    return state.replace(qp=qp, obs=obs, obs_p2=obs_p2, reward=reward)
 
   @property
   def action_size(self):
@@ -117,7 +118,7 @@ class AntFetchPO(env.Env):
     """The size of the observation vector for the second ('follower') agent"""
     rng = jp.random_prngkey(0)
     reset_state = self.unwrapped.reset(rng)
-    return reset_state.obs.shape[-1]
+    return reset_state.obs_p2.shape[-1]
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Egocentric observation of target and the ant's body."""
