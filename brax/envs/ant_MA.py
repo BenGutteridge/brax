@@ -123,8 +123,7 @@ class Ant_MA(env.Env):
     if self.any_dir:
       return jp.concatenate(qpos + qvel + cfrc)
     else:
-      observe_reward_dir = [self.reward_dir * jp.ones(1)]
-      return jp.concatenate(qpos + qvel + cfrc + observe_reward_dir)
+      return jp.concatenate(qpos + qvel + cfrc + [self.reward_dir])
 
 
 _SYSTEM_CONFIG = """
