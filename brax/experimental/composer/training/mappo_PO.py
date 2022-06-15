@@ -450,7 +450,7 @@ def train(environment_fn: Callable[..., envs.Env],
   minimize_loop = jax.pmap(_minimize_loop, axis_name='i')
 
   inference = make_inference_fn(
-      core_env.observation_size, action_shapes, normalize_observations,
+      core_env.observation_size, core_env.observation_size_p2, action_shapes, normalize_observations,
       parametric_action_distribution_fn, make_models_fn)
 
   training_state = TrainingState(
