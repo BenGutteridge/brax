@@ -29,7 +29,7 @@ class AntFetch(env.Env):
     config = _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
     self.target_idx = self.sys.body.index['Target']
-    self.torso_idx = self.sys.body.index['Torso']
+    self.torso_idx = self.sys.body.index['$ Torso']
     self.target_radius = 2
     self.target_distance = 15
 
