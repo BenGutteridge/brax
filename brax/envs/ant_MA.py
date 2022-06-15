@@ -120,10 +120,11 @@ class Ant_MA(env.Env):
     # flatten bottom dimension
     cfrc = [jp.reshape(x, x.shape[:-2] + (-1,)) for x in cfrc]
 
-    observe_reward_dir = []
-    if not self.any_dir: observe_reward_dir.append(self.reward_dir*jp.ones(1))
-
-    return jp.concatenate(qpos + qvel + cfrc + observe_reward_dir)
+    if self.any_dir:
+      return jp.concatenate(qpos + qvel + cfrc)
+    else:
+      observe_reward_dir = [self.reward_dir * jp.ones(1)]
+      return jp.concatenate(qpos + qvel + cfrc + observe_reward_dir)
 
 
 _SYSTEM_CONFIG = """
