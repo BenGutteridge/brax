@@ -45,7 +45,7 @@ class Ant_MA(env.Env):
     qvel = jp.random_uniform(rng2, (self.sys.num_joint_dof,), -.1, .1)
     qp = self.sys.default_qp(joint_angle=qpos, joint_velocity=qvel)
     info = self.sys.info(qp)
-    obs = self._get_obs(qp, info, self.reward_dir)
+    obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
     reward = jnp.zeros(self.reward_shape)
     metrics = {
@@ -59,7 +59,7 @@ class Ant_MA(env.Env):
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
     qp, info = self.sys.step(state.qp, action)
-    obs = self._get_obs(qp, info, self.reward_dir)
+    obs = self._get_obs(qp, info)
     # rewards moving any dist away from origin, not just +x
     dist_before = norm(state.qp.pos[0])
     dist_after = norm(qp.pos[0])
@@ -85,7 +85,7 @@ class Ant_MA(env.Env):
   def action_size(self):
     return self.n_agents * self.actuators_per_agent
 
-  def _get_obs(self, qp: brax.QP, info: brax.Info, reward_dir=None) -> jp.ndarray:
+  def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
     # some pre-processing to pull joint angles and velocities
     (joint_angle,), (joint_vel,) = self.sys.joints[0].angle_vel(qp)
