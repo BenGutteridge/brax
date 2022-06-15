@@ -252,8 +252,12 @@ def train(environment_fn: Callable[..., envs.Env],
     parametric_action_distribution = parametric_action_distribution_fn(
         event_size=action_shape['size'])
 
-    policy_model, value_model = make_models_fn(
-        parametric_action_distribution.param_size, core_env.observation_size)
+    if i==0:
+      policy_model, value_model = make_models_fn(
+          parametric_action_distribution.param_size, core_env.observation_size)
+    else: # p2
+      policy_model, value_model = make_models_fn(
+          parametric_action_distribution.param_size, core_env.observation_size_p2) # NNs slightly different for p1/p2
     key_policy, key_value, key_models = jax.random.split(key_models, 3)
 
     optimizer = optax.adam(learning_rate=learning_rate)
@@ -545,6 +549,7 @@ def train(environment_fn: Callable[..., envs.Env],
 
 def make_inference_fn(
     observation_size: int,
+    observation_size_p2: int,
     action_shapes: Dict[str, Any],
     normalize_observations: bool = False,
     parametric_action_distribution_fn: Optional[Callable[[
@@ -557,23 +562,35 @@ def make_inference_fn(
   action_size = sum([s['size'] for s in action_shapes.values()])
   _, obs_normalizer_apply_fn = normalization.make_data_and_apply_fn(
       observation_size, normalize_observations=normalize_observations)
+  _, obs_normalizer_apply_fn_p2 = normalization.make_data_and_apply_fn(
+      observation_size_p2, normalize_observations=normalize_observations)
   agents = odict()
   for k, action_shape in action_shapes.items():
     parametric_action_distribution = parametric_action_distribution_fn(
         event_size=action_shape['size'])
-    policy_model, _ = make_models_fn(parametric_action_distribution.param_size,
+    if k=='agent_0':
+      policy_model, _ = make_models_fn(parametric_action_distribution.param_size,
                                      observation_size)
+    else: # PLAYER 2 separate NN
+      policy_model, _ = make_models_fn(parametric_action_distribution.param_size,
+                                     observation_size_p2)
     agents[k] = (parametric_action_distribution, policy_model)
 
   def inference_fn(params, obs, key): # key is basically seed, I think
     normalizer_params, policy_params = params['normalizer'], params['policy']
+    (obs, obs_p2) = obs 
     obs = obs_normalizer_apply_fn(normalizer_params, obs)
+    obs_p2 = obs_normalizer_apply_fn_p2(normalizer_params, obs_p2)
     actions = odict()
     for i, (k, (parametric_action_distribution,
                 policy_model)) in enumerate(agents.items()):
-      actions[k] = parametric_action_distribution.sample(
+      if i==0:
+        actions[k] = parametric_action_distribution.sample(
           policy_model.apply(policy_params[i], obs), key)
-    actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
+      else:
+        actions[k] = parametric_action_distribution.sample(
+          policy_model.apply(policy_params[i], obs), key)
+    actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,)) # possible issue here
     actions = data_utils.fill_array(actions, actions_arr, action_shapes)
     return actions
 
