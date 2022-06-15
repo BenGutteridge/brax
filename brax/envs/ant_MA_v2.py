@@ -111,7 +111,7 @@ class Ant_MA_v2(env.Env):
     # flatten bottom dimension
     cfrc = [jp.reshape(x, x.shape[:-2] + (-1,)) for x in cfrc]
 
-    return jp.concatenate(qpos + qvel + cfrc + [reward_dir])
+    return jp.concatenate(qpos + qvel + cfrc) #+ [reward_dir])
 
 
 _SYSTEM_CONFIG = """
