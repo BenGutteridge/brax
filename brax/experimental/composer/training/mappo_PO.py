@@ -245,6 +245,14 @@ def train(environment_fn: Callable[..., envs.Env],
           num_leading_batch_dims=2,
           pmap_to_devices=local_devices_to_use))
 
+  # normalizer params for player 2
+  normalizer_params_p2, obs_normalizer_update_fn_p2, obs_normalizer_apply_fn_p2 = (
+      normalization.create_observation_normalizer(
+          core_env.observation_size_p2,
+          normalize_observations,
+          num_leading_batch_dims=2,
+          pmap_to_devices=local_devices_to_use))  
+
   agents = odict()
   policy_params = policy_params or [None] * len(action_shapes)
   value_params = value_params or [None] * len(action_shapes)
