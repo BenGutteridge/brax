@@ -187,7 +187,7 @@ def visualize_trajectory(jits,
     if state.done: # end traj if traj ends
       print('Termination condition reached')
       break
-  print('Num timesteps: %d, %d seconds' % (len(rollout), round(len(rollout)/env.sys.config.dt)))
+  print('Num timesteps: %d, %d seconds' % (len(rollout), round(len(rollout)*env.sys.config.dt)))
 
   render_path = join(output_path, 'render_seed=%02d.html'%seed) if output_path \
                 else '/content/tmp/render_seed=%02d.html'%seed 
