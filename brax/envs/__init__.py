@@ -67,7 +67,7 @@ _envs = {
     'piggy_in_the_middle_MA': piggy_in_the_middle_MA.PITM_MA,
     'pitm_throw': pitm_throw.PITM_Throw,
     'ant_MA': ant_MA.Ant_MA,
-    'ant_BR': ant_MA_BR.Ant_BR,    
+    'ant_BR': ant_BR.Ant_BR,    
     'ant_fetch': ant_fetch.AntFetch,
 }
 
