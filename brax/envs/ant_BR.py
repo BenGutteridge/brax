@@ -43,7 +43,7 @@ class Ant_BR(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    self.rng, rng1, rng2 = jp.random_split(rng, 3)
+    rng, rng1, rng2 = jp.random_split(rng, 3)
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
@@ -59,14 +59,16 @@ class Ant_BR(env.Env):
         'reward_forward': zero,
         'reward_survive': zero,
     }
-    return env.State(qp, obs, reward, done, metrics)
+    info = {'rng': rng}
+    return env.State(qp, obs, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
 
     # need to get action from static agent environment
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
-    act_rng, self.rng = jax.random.split(self.rng) 
+    rng = state.info['rng']
+    act_rng, rng = jax.random.split(rng) 
     act = self.static_agent_policy(obs=state.obs, key=act_rng)[self.group_action_shapes.size:]
     act = jp.concatenate([action[:self.group_action_shapes.size]] + [act])
 
@@ -90,7 +92,8 @@ class Ant_BR(env.Env):
         reward_contact_cost=contact_cost,
         reward_forward=forward_reward,
         reward_survive=survive_reward)
-
+    state.info.update(rng=rng)
+    
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
 
   @property
