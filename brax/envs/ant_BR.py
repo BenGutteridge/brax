@@ -69,8 +69,9 @@ class Ant_BR(env.Env):
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
     rng = state.info['rng']
     act_rng, rng = jax.random.split(rng) 
-    act = self.static_agent_policy(obs=state.obs, key=act_rng)[self.group_action_shapes.size:]
-    act = jp.concatenate([action[:self.group_action_shapes.size]] + [act])
+    act_size = self.group_action_shapes['size']
+    act = self.static_agent_policy(obs=state.obs, key=act_rng)[act_size:]
+    act = jp.concatenate([action[:act_size]] + [act])
 
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
@@ -93,7 +94,7 @@ class Ant_BR(env.Env):
         reward_forward=forward_reward,
         reward_survive=survive_reward)
     state.info.update(rng=rng)
-    
+
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
 
   @property
