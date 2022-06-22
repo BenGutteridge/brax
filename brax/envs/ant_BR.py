@@ -69,7 +69,7 @@ class Ant_BR(env.Env):
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
     rng = state.info['rng']
     act_rng, rng = jax.random.split(rng) 
-    act_size = self.group_action_shapes['size']
+    act_size = self.group_action_shapes['agent_0']['size']
     act = self.static_agent_policy(obs=state.obs, key=act_rng)[act_size:]
     act = jp.concatenate([action[:act_size]] + [act])
 
