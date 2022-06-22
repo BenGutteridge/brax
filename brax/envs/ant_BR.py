@@ -65,7 +65,7 @@ class Ant_BR(env.Env):
 
     # need to get action from static agent environment
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
-    act = self.static_agent_policy(state.obs)[self.group_action_shapes.size:]
+    act = self.static_agent_policy(obs=state.obs)[self.group_action_shapes.size:]
     act = jp.concatenate([action[:self.group_action_shapes.size]] + [act])
 
     qp, info = self.sys.step(state.qp, action)
