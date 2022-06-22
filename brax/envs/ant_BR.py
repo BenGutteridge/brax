@@ -15,6 +15,7 @@
 """Trains an ant to run in the +x direction."""
 
 import brax
+import jax
 from brax import jumpy as jp
 from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes
@@ -42,7 +43,7 @@ class Ant_BR(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    rng, rng1, rng2 = jp.random_split(rng, 3)
+    self.rng, rng1, rng2 = jp.random_split(rng, 3)
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
@@ -65,7 +66,8 @@ class Ant_BR(env.Env):
 
     # need to get action from static agent environment
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
-    act = self.static_agent_policy(obs=state.obs)[self.group_action_shapes.size:]
+    act_rng, self.rng = jax.random.split(self.rng) 
+    act = self.static_agent_policy(obs=state.obs, key=act_rng)[self.group_action_shapes.size:]
     act = jp.concatenate([action[:self.group_action_shapes.size]] + [act])
 
     qp, info = self.sys.step(state.qp, action)
