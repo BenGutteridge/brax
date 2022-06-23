@@ -70,8 +70,9 @@ class Ant_BR(env.Env):
     rng = state.info['rng']
     act_rng, rng = jax.random.split(rng) 
     act_size = self.group_action_shapes['agent_0']['size']
-    act = self.static_agent_policy(obs=state.obs, key=act_rng)[act_size:]
-    act = jp.concatenate([action[:act_size]] + [act])
+    act = self.static_agent_policy(obs=state.obs, key=act_rng)#[act_size:]
+    # act = jp.concatenate([action[:act_size]] + [act])
+    action = act
 
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
