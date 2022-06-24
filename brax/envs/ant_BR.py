@@ -31,7 +31,7 @@ class Ant_BR(env.Env):
     self.go_x_dir = bool(kwargs.pop('go_x_dir', False))
     print('Optimising for x direction only: ', self.go_x_dir)
     # policy for static agent
-    self.static_agent_policy = kwargs.pop('static_agent_policy', None)
+    self.static_agent_pool = kwargs.pop('static_agent_pool', None)
     super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 1, 4 # one agent controls half an ant
@@ -68,9 +68,11 @@ class Ant_BR(env.Env):
     # need to get action from static agent environment
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
     rng = state.info['rng']
-    act_rng, rng = jax.random.split(rng) 
+    agent_rng, act_rng, rng = jax.random.split(rng, 3) 
     act_size = self.group_action_shapes['agent_0']['size']
-    static_act = self.static_agent_policy(obs=state.obs, key=act_rng)[act_size:]
+    pool_size = len(self.static_agent_pool)
+    random_policy = self.static_agent_pool[jax.random.randint(agent_rng, (1,), 0, pool_size)]
+    static_act = random_policy(obs=state.obs, key=act_rng)[act_size:]
     action = jp.concatenate([action[:act_size]] + [static_act])
 
     qp, info = self.sys.step(state.qp, action)
