@@ -21,6 +21,7 @@ from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes
 from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
+from functools import partial
 
 class Ant_BR(env.Env):
   """Trains *half* an ant to run in any direction -- other half is a static pretrained agent"""
@@ -71,7 +72,7 @@ class Ant_BR(env.Env):
     agent_rng, act_rng, rng = jax.random.split(rng, 3) 
     act_size = self.group_action_shapes['agent_0']['size']
     pool_size = len(self.static_agent_pool)
-    random_policy = self.static_agent_pool[jax.random.randint(agent_rng, (1,), 0, pool_size)]
+    random_policy = self.sample_from_policy_pool(agent_rng)
     static_act = random_policy(obs=state.obs, key=act_rng)[act_size:]
     action = jp.concatenate([action[:act_size]] + [static_act])
 
@@ -129,6 +130,12 @@ class Ant_BR(env.Env):
     cfrc = [jp.reshape(x, x.shape[:-2] + (-1,)) for x in cfrc]
 
     return jp.concatenate(qpos + qvel + cfrc)
+
+  @partial(jax.jit, static_argnums=(0,))
+  def sample_from_policy_pool(self, agent_rng):
+    pool_size = len(self.static_agent_pool)
+    random_policy = self.static_agent_pool[jax.random.randint(agent_rng, (1,), 0, pool_size)]
+    return random_policy
 
 
 _SYSTEM_CONFIG = """
