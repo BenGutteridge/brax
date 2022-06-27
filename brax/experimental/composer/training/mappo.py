@@ -257,7 +257,7 @@ def train(environment_fn: Callable[..., envs.Env],
 
     policy_model, value_model = make_models_fn(
         parametric_action_distribution.param_size, core_env.observation_size)
-    key_policy, key_value, key_models = jax.random.split(key_models, 3)
+    key_policy, key_value, key_models, key_static_agent = jax.random.split(key_models, 4)
 
     optimizer = optax.adam(learning_rate=learning_rate)
     init_params = {
@@ -266,9 +266,8 @@ def train(environment_fn: Callable[..., envs.Env],
         'extra': extra_params
     }
     if action_shape['is_static']:
-      key, agent_rng = jax.random.split(key, 4)
       num_static_policies = len(static_policies_params[i])
-      agent_idx = jax.random.randint(agent_rng, (1,), 0, num_static_policies)
+      agent_idx = jax.random.randint(key_static_agent, (1,), 0, num_static_policies)
       init_params['policy'] = static_policies_params[i][agent_idx]  # only policy params needed hopefully
     optimizer_state = optimizer.init(init_params)
     optimizer_state, init_params = pmap.bcast_local_devices(
