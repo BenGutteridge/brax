@@ -301,7 +301,10 @@ def train(environment_fn: Callable[..., envs.Env],
     actions = odict()
     for i, (k, agent) in enumerate(agents.items()):
       print('i: ', i, '\n', policy_params[i])
-      logits = agent.policy_model.apply(policy_params[i]['policy'][1], obs) # hacky - also, we want to use the right normaliser params etc
+      if i == 1:
+        logits = agent.policy_model.apply(policy_params[i]['policy'][1], obs) # hacky - also, we want to use the right normaliser params etc
+      else:
+        logits = agent.policy_model.apply(policy_params[i], obs) # hacky - also, we want to use the right normaliser params etc
       actions[k] = agent.parametric_action_distribution.sample(
           logits, key_sample)
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
