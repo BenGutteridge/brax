@@ -17,6 +17,7 @@
 *This is branched from braxlines/training/ppo.py, and will be folded back.*
 """
 
+from ast import excepthandler
 from collections import OrderedDict as odict
 import functools
 import time
@@ -299,6 +300,7 @@ def train(environment_fn: Callable[..., envs.Env],
     obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
     actions = odict()
     for i, (k, agent) in enumerate(agents.items()):
+      print('i: ', i, '\n', policy_params[i])
       logits = agent.policy_model.apply(policy_params[i], obs)
       actions[k] = agent.parametric_action_distribution.sample(
           logits, key_sample)
