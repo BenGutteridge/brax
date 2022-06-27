@@ -268,6 +268,8 @@ def train(environment_fn: Callable[..., envs.Env],
     if action_shape['is_static']:
       num_static_policies = len(static_policies_params[i])
       agent_idx = jax.random.randint(key_static_agent, (1,), 0, num_static_policies)
+      print('agent_idx: ', agent_idx)
+      print('static_policies_params[i]', static_policies_params[i])
       init_params['policy'] = static_policies_params[i][agent_idx]  # only policy params needed hopefully
     optimizer_state = optimizer.init(init_params)
     optimizer_state, init_params = pmap.bcast_local_devices(
