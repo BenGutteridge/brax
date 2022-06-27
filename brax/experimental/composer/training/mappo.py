@@ -265,7 +265,7 @@ def train(environment_fn: Callable[..., envs.Env],
         'value': value_params[i] or value_model.init(key_value),
         'extra': extra_params
     }
-    if action_shape[k]['is_static']:
+    if action_shape['is_static']:
       key, agent_rng = jax.random.split(key, 4)
       num_static_policies = len(static_policies_params[i])
       agent_idx = jax.random.randint(agent_rng, (1,), 0, num_static_policies)
