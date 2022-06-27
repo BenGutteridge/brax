@@ -250,6 +250,7 @@ def train(environment_fn: Callable[..., envs.Env],
   agents = odict()
   policy_params = policy_params or [None] * len(action_shapes)
   value_params = value_params or [None] * len(action_shapes)
+  num_static_policies = len(static_policies_params)
   for i, (k, action_shape) in enumerate(action_shapes.items()):
     # i : number, k : agent_#, action_shape : info
     parametric_action_distribution = parametric_action_distribution_fn(
@@ -266,8 +267,7 @@ def train(environment_fn: Callable[..., envs.Env],
         'extra': extra_params
     }
     if action_shape['is_static']:
-      num_static_policies = len(static_policies_params[i])
-      agent_idx = jax.random.randint(key_static_agent, (1,), 0, num_static_policies)
+      agent_idx = int(jax.random.randint(key_static_agent, (1,), 0, num_static_policies))
       print('agent_idx: ', agent_idx)
       print('static_policies_params[i]', static_policies_params[i])
       init_params['policy'] = static_policies_params[i][agent_idx]  # only policy params needed hopefully
