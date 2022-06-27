@@ -42,9 +42,11 @@ class Ant_BR(env.Env):
       self.reward_shape = (len(self.group_action_shapes),)
     else: self.reward_shape = 1
 
-  def reset(self, rng: jp.ndarray) -> env.State:
+  def reset(self, rng: jp.ndarray, static_agent_idx: int) -> env.State:
     """Resets the environment to an initial state."""
     rng, rng1, rng2 = jp.random_split(rng, 3)
+    # sample 
+    info['static_policy'] = self.static_agent_pool[static_agent_idx]
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
@@ -69,11 +71,10 @@ class Ant_BR(env.Env):
     # need to get action from static agent environment
     # I'm thinking pass in a jitted functools partial with params etc already sorted, that accepts obs
     rng = state.info['rng']
-    agent_rng, act_rng, rng = jax.random.split(rng, 3) 
+    static_policy = state.info['static_policy']
+    act_rng, rng = jax.random.split(rng) 
     act_size = self.group_action_shapes['agent_0']['size']
-    pool_size = len(self.static_agent_pool)
-    random_policy = self.sample_from_policy_pool(agent_rng)
-    static_act = random_policy(obs=state.obs, key=act_rng)[act_size:]
+    static_act = static_policy(obs=state.obs, key=act_rng)[act_size:]
     action = jp.concatenate([action[:act_size]] + [static_act])
 
     qp, info = self.sys.step(state.qp, action)

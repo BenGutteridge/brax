@@ -9,14 +9,17 @@ from os.path import join
 from brax.io import model, html
 from collections import OrderedDict as odict
 
-def make_group_action_shapes(players, actions_per_player):
+def make_group_action_shapes(players, actions_per_player, static_players=[]):
   group_action_shapes, count = {}, 0
   for i in players:
     group_action_shapes[i] = dict(
         indices=tuple(np.arange(count*actions_per_player, (count+1)*actions_per_player)),
         shape=(actions_per_player,),
         size=actions_per_player,
+        is_static=False
         )
+    if i in static_players:
+      group_action_shapes[i]['is_static'] = True
     count += 1
   return odict(group_action_shapes)
 

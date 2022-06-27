@@ -182,6 +182,8 @@ def train(environment_fn: Callable[..., envs.Env],
               [int, int],
               Tuple[networks.FeedForwardModel]]] = networks.make_models,
           policy_params: Optional[Dict[str, jnp.ndarray]] = None,
+          # n.b. check how to use 'typing' module
+          static_policies_params = None, # : Optional[Dict[str, jnp.ndarray]] = None, # added by ME. Value is list of all params
           value_params: Optional[Dict[str, jnp.ndarray]] = None,
           extra_params: Optional[Dict[str, Dict[str, jnp.ndarray]]] = None,
           extra_step_kwargs: bool = False, # True originally
@@ -262,6 +264,11 @@ def train(environment_fn: Callable[..., envs.Env],
         'value': value_params[i] or value_model.init(key_value),
         'extra': extra_params
     }
+    if action_shape[i]['is_static']:
+      key, agent_rng = jax.random.split(key, 4)
+      num_static_policies = len(static_policies_params[i])
+      agent_idx = jax.random.randint(agent_rng, (1,), 0, num_static_policies)
+      init_params['policy'] = static_policies_params[i][agent_idx]  # only policy params needed hopefully
     optimizer_state = optimizer.init(init_params)
     optimizer_state, init_params = pmap.bcast_local_devices(
         (optimizer_state, init_params), local_devices_to_use)
@@ -304,9 +311,10 @@ def train(environment_fn: Callable[..., envs.Env],
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     normalizer_params = jax.tree_map(lambda x: x[0], normalizer_params)
     extra_params = jax.tree_map(lambda x: x[0], extra_params)
+    key, agent_key = jax.random.split(key)
     (state, _, _, _, key), _ = jax.lax.scan(
         do_one_step_eval,
-        (state, policy_params, normalizer_params, extra_params, key), (),
+        (state, policy_params, normalizer_params, extra_params, key, agent_key), (),
         length=episode_length // action_repeat)
     return state, key
 
@@ -365,13 +373,14 @@ def train(environment_fn: Callable[..., envs.Env],
     key, key_loss = jax.random.split(key)
     metrics = []
     for i, agent in enumerate(agents.values()):
-      loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
-                                                 key_loss)
-      metrics.append(agent_metrics)
-      loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
-      params_update, optimizer_state[i] = optimizer.update(
-          loss_grad, optimizer_state[i])
-      params[i] = optax.apply_updates(params[i], params_update)
+      if not agent['is_static']:
+        loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
+                                                  key_loss)
+        metrics.append(agent_metrics)
+        loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
+        params_update, optimizer_state[i] = optimizer.update(
+            loss_grad, optimizer_state[i])
+        params[i] = optax.apply_updates(params[i], params_update)
 
     return (optimizer_state, params, key), metrics
 
@@ -400,8 +409,8 @@ def train(environment_fn: Callable[..., envs.Env],
     return [params[key] for params in state.params]
 
   def run_epoch(carry, unused_t):
-    training_state, state = carry
-    key_minimize, key_generate_unroll, new_key = jax.random.split(
+    training_state, state, static_policies = carry
+    key_minimize, key_generate_unroll, new_key, static_agent_key = jax.random.split(
         training_state.key, 3)
     (state, _, _, _, _), data = jax.lax.scan(
         generate_unroll,
@@ -426,6 +435,12 @@ def train(environment_fn: Callable[..., envs.Env],
                          data, udata, key_minimize), (),
         length=num_update_epochs)
 
+    # changing static params
+    static_agent_idx = jax.random.randint(static_agent_key, (1,), 0, len(static_policies))
+    static_policy = static_policies[static_agent_idx]
+    params[1] = static_policy # hacky but might work
+    print('New static policy: %d' % static_agent_idx) # n.b. might only on compile - then again maybe not, not jitted!
+
     new_training_state = TrainingState(
         optimizer_state=optimizer_state,
         params=params,
@@ -436,9 +451,9 @@ def train(environment_fn: Callable[..., envs.Env],
   num_epochs = num_timesteps // (
       batch_size * unroll_length * num_minibatches * action_repeat)
 
-  def _minimize_loop(training_state, state):
+  def _minimize_loop(training_state, state, static_policies):
     (training_state, state), losses = jax.lax.scan(
-        run_epoch, (training_state, state), (),
+        run_epoch, (training_state, state, static_policies), (),
         length=num_epochs // log_frequency)
     losses = jax.tree_map(jnp.mean, losses)
     return (training_state, state), losses
@@ -451,7 +466,7 @@ def train(environment_fn: Callable[..., envs.Env],
 
   training_state = TrainingState(
       optimizer_state=[agent.optimizer_state for agent in agents.values()],
-      params=[agent.init_params for agent in agents.values()],
+      params=[agent.init_params for agent in agents.values()], # HERE is where the params are
       key=jnp.stack(jax.random.split(key, local_devices_to_use)),
       normalizer_params=normalizer_params)
   training_walltime = 0
@@ -515,7 +530,7 @@ def train(environment_fn: Callable[..., envs.Env],
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
-    (training_state, state), losses = minimize_loop(training_state, state)
+    (training_state, state), losses = minimize_loop(training_state, state, static_policies_params)
     jax.tree_map(lambda x: x.block_until_ready(), losses)
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
            (time.time() - t)) * action_repeat
