@@ -251,6 +251,7 @@ def train(environment_fn: Callable[..., envs.Env],
   policy_params = policy_params or [None] * len(action_shapes)
   value_params = value_params or [None] * len(action_shapes)
   for i, (k, action_shape) in enumerate(action_shapes.items()):
+    # i : number, k : agent_#, action_shape : info
     parametric_action_distribution = parametric_action_distribution_fn(
         event_size=action_shape['size'])
 
@@ -264,7 +265,7 @@ def train(environment_fn: Callable[..., envs.Env],
         'value': value_params[i] or value_model.init(key_value),
         'extra': extra_params
     }
-    if action_shape[i]['is_static']:
+    if action_shape[k]['is_static']:
       key, agent_rng = jax.random.split(key, 4)
       num_static_policies = len(static_policies_params[i])
       agent_idx = jax.random.randint(agent_rng, (1,), 0, num_static_policies)
