@@ -456,14 +456,14 @@ def train(environment_fn: Callable[..., envs.Env],
   num_epochs = num_timesteps // (
       batch_size * unroll_length * num_minibatches * action_repeat)
 
-  def _minimize_loop(training_state, state, static_policies):
+  def _minimize_loop(training_state, state):
     (training_state, state), losses = jax.lax.scan(
-        run_epoch, (training_state, state, static_policies), (),
+        run_epoch, (training_state, state), (),
         length=num_epochs // log_frequency)
     losses = jax.tree_map(jnp.mean, losses)
     return (training_state, state), losses
 
-  minimize_loop = jax.pmap(_minimize_loop, axis_name='i', static_broadcasted_argnums=(2,))
+  minimize_loop = jax.pmap(_minimize_loop, axis_name='i')
 
   inference = make_inference_fn(
       core_env.observation_size, action_shapes, normalize_observations,
