@@ -189,7 +189,8 @@ def train(environment_fn: Callable[..., envs.Env],
           extra_step_kwargs: bool = False, # True originally
           extra_loss_update_ratios: Optional[Dict[str, float]] = None,
           extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
-                                                      jnp.ndarray]]] = None):
+                                                      jnp.ndarray]]] = None,
+          training_state = None):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
   xt = time.time()
@@ -455,7 +456,8 @@ def train(environment_fn: Callable[..., envs.Env],
       core_env.observation_size, action_shapes, normalize_observations,
       parametric_action_distribution_fn, make_models_fn)
 
-  training_state = TrainingState(
+  # allow for existing training_state to be passed in
+  training_state = training_state or TrainingState(
       optimizer_state=[agent.optimizer_state for agent in agents.values()],
       params=[agent.init_params for agent in agents.values()],
       key=jnp.stack(jax.random.split(key, local_devices_to_use)),
