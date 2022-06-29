@@ -28,12 +28,14 @@ class Ant_MA(env.Env):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
     self.go_x_dir = bool(kwargs.pop('go_x_dir', False))
+    static_players_args = kwargs.pop('static_players_args', [])
     print('Optimising for x direction only: ', self.go_x_dir)
     super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 2, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
-      self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
+      static_players = [players[j] for j in static_players_args]
+      self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent, static_players)
       self.is_multiagent = True
       self.reward_shape = (len(self.group_action_shapes),)
     else: self.reward_shape = 1
