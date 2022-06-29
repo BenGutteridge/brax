@@ -21,6 +21,7 @@ from collections import OrderedDict as odict
 import functools
 import time
 from typing import Any, Callable, Dict, Optional, Tuple
+from xmlrpc.client import Boolean
 
 from absl import logging
 from brax import envs
@@ -55,6 +56,7 @@ class Agent:
   optimizer_state: Any
   init_params: Any
   grad_loss: Any
+  is_static: Boolean
 
 
 def compute_ppo_loss(
@@ -282,7 +284,8 @@ def train(environment_fn: Callable[..., envs.Env],
 
     grad_loss = jax.grad(loss_fn, has_aux=True)
     agents[k] = Agent(parametric_action_distribution, policy_model,
-                      optimizer_state, init_params, grad_loss)
+                      optimizer_state, init_params, grad_loss, 
+                      action_shape['is_static'])
 
   key_debug = jax.random.PRNGKey(seed + 666)
 
