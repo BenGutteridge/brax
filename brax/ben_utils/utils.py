@@ -11,15 +11,14 @@ from collections import OrderedDict as odict
 
 def make_group_action_shapes(players, actions_per_player, static_players=[]):
   group_action_shapes, count = {}, 0
-  for i in players:
-    group_action_shapes[i] = dict(
+  for player in enumerate(players):
+    is_static = True if player in static_players else False
+    group_action_shapes[player] = dict(
         indices=tuple(np.arange(count*actions_per_player, (count+1)*actions_per_player)),
         shape=(actions_per_player,),
         size=actions_per_player,
-        is_static=False
+        is_static=is_static
         )
-    if i in static_players:
-      group_action_shapes[i]['is_static'] = True
     count += 1
   return odict(group_action_shapes)
 
