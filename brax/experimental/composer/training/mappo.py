@@ -250,8 +250,6 @@ def train(environment_fn: Callable[..., envs.Env],
 
   agents = odict()
   policy_params = policy_params or [None] * len(action_shapes)
-  print('Policy params: ', policy_params)
-  input('continue...\n')
   value_params = value_params or [None] * len(action_shapes)
   for i, (k, action_shape) in enumerate(action_shapes.items()):
     parametric_action_distribution = parametric_action_distribution_fn(
