@@ -369,7 +369,7 @@ def train(environment_fn: Callable[..., envs.Env],
     key, key_loss = jax.random.split(key)
     metrics = []
     for i, agent in enumerate(agents.values()):
-      if not agent['is_static']:
+      if not agent.is_static:
         loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
                                                   key_loss)
         metrics.append(agent_metrics)
