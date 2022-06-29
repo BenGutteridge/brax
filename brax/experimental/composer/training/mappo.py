@@ -546,7 +546,7 @@ def train(environment_fn: Callable[..., envs.Env],
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
 
-  return (inference, params, metrics)
+  return (inference, params, metrics, training_state)
 
 
 def make_inference_fn(
