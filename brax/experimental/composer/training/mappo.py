@@ -247,6 +247,7 @@ def train(environment_fn: Callable[..., envs.Env],
 
   agents = odict()
   policy_params = policy_params or [None] * len(action_shapes)
+  print('Policy params: ', policy_params)
   value_params = value_params or [None] * len(action_shapes)
   for i, (k, action_shape) in enumerate(action_shapes.items()):
     parametric_action_distribution = parametric_action_distribution_fn(
@@ -365,13 +366,14 @@ def train(environment_fn: Callable[..., envs.Env],
     key, key_loss = jax.random.split(key)
     metrics = []
     for i, agent in enumerate(agents.values()):
-      loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
-                                                 key_loss)
-      metrics.append(agent_metrics)
-      loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
-      params_update, optimizer_state[i] = optimizer.update(
-          loss_grad, optimizer_state[i])
-      params[i] = optax.apply_updates(params[i], params_update)
+      if not agent['is_static']:
+        loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
+                                                  key_loss)
+        metrics.append(agent_metrics)
+        loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
+        params_update, optimizer_state[i] = optimizer.update(
+            loss_grad, optimizer_state[i])
+        params[i] = optax.apply_updates(params[i], params_update)
 
     return (optimizer_state, params, key), metrics
 
