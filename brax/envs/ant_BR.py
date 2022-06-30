@@ -21,13 +21,15 @@ from brax.ben_utils.utils import make_group_action_shapes
 from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
 
-class Ant_MA_v2(env.Env):
-  """Trains an ant to run in a random direction direction [BROKEN CURRENTLY] """
+class Ant_BR(env.Env):
+  """Trains half an ant to run, training with a pool of static agents"""
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    self.static_agent_policies = kwargs.pop('static_agent_policies', None)
+    self.static_agent_random_order = kwargs.pop('static_agent_random_order', None)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 2, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
@@ -38,16 +40,14 @@ class Ant_MA_v2(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    rng, rng1, rng2, rng_dir = jp.random_split(rng, 4)
-    # random reward direction
-    self.reward_dir = jp.random_uniform(rng_dir, (1,), -jp.pi, jp.pi) # not allowed to do this - leak
+    rng, rng1, rng2 = jp.random_split(rng, 3)
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
     qvel = jp.random_uniform(rng2, (self.sys.num_joint_dof,), -.1, .1)
     qp = self.sys.default_qp(joint_angle=qpos, joint_velocity=qvel)
     info = self.sys.info(qp)
-    obs = self._get_obs(qp, info, self.reward_dir)
+    obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
     reward = jnp.zeros(self.reward_shape)
     metrics = {
@@ -61,10 +61,11 @@ class Ant_MA_v2(env.Env):
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
     qp, info = self.sys.step(state.qp, action)
-    obs = self._get_obs(qp, info, self.reward_dir)
-    delta = qp.pos[0] - state.qp.pos[0]
-    reward_dir_vec = jp.concatenate([jnp.cos(self.reward_dir)] + [jnp.sin(self.reward_dir)])
-    forward_reward = jnp.dot(delta, reward_dir_vec) / self.sys.config.dt
+    obs = self._get_obs(qp, info)
+    # rewards moving any dist away from origin, not just +x
+    dist_before = norm(state.qp.pos[0])
+    dist_after = norm(qp.pos[0])
+    forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
                     jp.sum(jp.square(jp.clip(info.contact.vel, -1, 1))))
@@ -86,7 +87,7 @@ class Ant_MA_v2(env.Env):
   def action_size(self):
     return self.n_agents * self.actuators_per_agent
 
-  def _get_obs(self, qp: brax.QP, info: brax.Info, reward_dir=None) -> jp.ndarray:
+  def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
     # some pre-processing to pull joint angles and velocities
     (joint_angle,), (joint_vel,) = self.sys.joints[0].angle_vel(qp)
@@ -111,7 +112,7 @@ class Ant_MA_v2(env.Env):
     # flatten bottom dimension
     cfrc = [jp.reshape(x, x.shape[:-2] + (-1,)) for x in cfrc]
 
-    return jp.concatenate(qpos + qvel + cfrc) #+ [reward_dir])
+    return jp.concatenate(qpos + qvel + cfrc)
 
 
 _SYSTEM_CONFIG = """
