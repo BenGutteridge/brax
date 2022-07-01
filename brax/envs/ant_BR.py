@@ -27,10 +27,10 @@ class Ant_BR(env.Env):
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
-    super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
     self.static_agent_params = kwargs.pop('static_agent_params', None)
-    self.jit_inference_fn = kwargs.pop('static_agent_inference_fn')
+    self.jit_inference_fn = kwargs.pop('static_agent_inference_fn', None)
+    super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 1, 4 # only 1, since the other two legs are a static agent
       players = ['agent_%d' % i for i in range(self.n_agents)]
