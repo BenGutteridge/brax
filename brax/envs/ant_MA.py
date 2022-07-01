@@ -22,12 +22,14 @@ from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
 
 class Ant_MA(env.Env):
-  """Trains an ant to run in the +x direction."""
+  """Trains an ant to run in any direction."""
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
-    super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    self.go_x_dir = bool(kwargs.pop('go_x_dir', False))
+    print('Optimising for x direction only: ', self.go_x_dir)
+    super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 2, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
@@ -60,9 +62,9 @@ class Ant_MA(env.Env):
     """Run one timestep of the environment's dynamics."""
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
-    # rewards moving any dist away from origin, not just +x
-    dist_before = norm(state.qp.pos[0])
-    dist_after = norm(qp.pos[0])
+    # option to reward moving any dist away from origin, not just +x
+    dist_before = norm(state.qp.pos[0]) if not self.go_x_dir else state.qp.pos[0, 0]
+    dist_after = norm(qp.pos[0]) if not self.go_x_dir else qp.pos[0, 0]
     forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *

@@ -185,7 +185,9 @@ def visualize_trajectory(jits,
     act = jit_inference_fn(params, state.obs, act_rng)
     state = jit_env_step(state, act)
     if state.done: # end traj if traj ends
+      print('Termination condition reached')
       break
+  print('Num timesteps: %d, %d seconds' % (len(rollout), round(len(rollout)*env.sys.config.dt)))
 
   render_path = join(output_path, 'render_seed=%02d.html'%seed) if output_path \
                 else '/content/tmp/render_seed=%02d.html'%seed 
@@ -207,7 +209,7 @@ def visualize_trajectory(jits,
     # rewards
     fig, ax = plt.subplots(figsize=(12,8))
     legend = []
-    num_plots_per_sec = int(1/env.sys.config.dt)
+    num_plots_per_sec = round(1/env.sys.config.dt)
     for key in r_keys:
       if key not in do_not_plot:
         data = r_plots.pop(key)
