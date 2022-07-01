@@ -71,7 +71,7 @@ class Ant_BR(env.Env):
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
     # getting actions for static agent
-    rng, act_rng = jp.random_split(state.info['rng'], act_rng)
+    rng, act_rng = jp.random_split(state.info['rng'])
     static_policy = state.info['static_agent_policy']
     act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)[self.actuators_per_agent:]
     action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
