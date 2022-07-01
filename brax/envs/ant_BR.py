@@ -15,6 +15,7 @@
 """Trains an ant to run in the +x direction."""
 
 import brax
+import jax
 from brax import jumpy as jp
 from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes
@@ -29,9 +30,9 @@ class Ant_BR(env.Env):
     super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
     self.static_agent_policies = kwargs.pop('static_agent_policies', None)
-    self.static_agent_random_order = kwargs.pop('static_agent_random_order', None)
+    self.jit_inference_fn = kwargs.pop('static_agent_inference_fn')
     if is_multiagent:
-      self.n_agents, self.actuators_per_agent = 2, 4
+      self.n_agents, self.actuators_per_agent = 1, 4 # only 1, since the other two legs are a static agent
       players = ['agent_%d' % i for i in range(self.n_agents)]
       self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
       self.is_multiagent = True
@@ -40,7 +41,7 @@ class Ant_BR(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    rng, rng1, rng2 = jp.random_split(rng, 3)
+    rng, rng1, rng2 = jp.random_split(rng, 4)
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
@@ -50,16 +51,30 @@ class Ant_BR(env.Env):
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
     reward = jnp.zeros(self.reward_shape)
+    # randomising static agent
+    static_agent_policy, agent_idx, rng = self._sample_static_policy(rng)
+    info = {
+      'static_agent_policy': static_agent_policy,
+      'agent_idx': agent_idx,
+      'rng': rng,
+    } # n.b. different to the other info
     metrics = {
         'reward_ctrl_cost': zero,
         'reward_contact_cost': zero,
         'reward_forward': zero,
         'reward_survive': zero,
+        'agent_idx': agent_idx,
     }
-    return env.State(qp, obs, reward, done, metrics)
+    return env.State(qp, obs, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
+    # getting actions for static agent
+    rng, act_rng = jp.random_split(state.info['rng'], act_rng)
+    static_policy = state.info['static_agent_policy']
+    act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)[self.actuators_per_agent:]
+    action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
+    # take step
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
     # rewards moving any dist away from origin, not just +x
@@ -80,12 +95,25 @@ class Ant_BR(env.Env):
         reward_contact_cost=contact_cost,
         reward_forward=forward_reward,
         reward_survive=survive_reward)
+    state.info.update(rng=rng)
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
 
   @property
   def action_size(self):
     return self.n_agents * self.actuators_per_agent
+
+  def _sample_static_policy(self, rng):
+    layers = self.static_agent_policies
+    num_policies = len(layers['num_policies'])
+    rng, rng_agent = jp.random_split(rng)
+    agent_idx = jax.random.randint(rng_agent, (1,), 0, num_policies).astype(int)
+    params = {}
+    for i in range(5):
+      params['hidden_%d'%i] = dict(
+          kernel=jnp.squeeze(layers['hidden_%d'%i][agent_idx,:-1,:]),
+          bias=jnp.squeeze(layers['hidden_%d'%i][agent_idx,-1,:]))
+    return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""
