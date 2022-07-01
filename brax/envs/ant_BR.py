@@ -106,9 +106,8 @@ class Ant_BR(env.Env):
 
   def _sample_static_policy(self, rng):
     layers = self.static_agent_params
-    num_policies = len(layers['num_policies'])
     rng, rng_agent = jp.random_split(rng)
-    agent_idx = jax.random.randint(rng_agent, (1,), 0, num_policies).astype(int)
+    agent_idx = jax.random.randint(rng_agent, (1,), 0, layers['num_policies']).astype(int)
     params = {}
     for i in range(5):
       params['hidden_%d'%i] = dict(
