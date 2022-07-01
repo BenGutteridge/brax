@@ -41,7 +41,7 @@ class Ant_BR(env.Env):
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
-    rng, rng1, rng2 = jp.random_split(rng, 4)
+    rng, rng1, rng2 = jp.random_split(rng, 3)
     # init pose
     qpos = self.sys.default_angle() + jp.random_uniform(
         rng1, (self.sys.num_joint_dof,), -.1, .1)
