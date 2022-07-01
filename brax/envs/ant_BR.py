@@ -29,7 +29,7 @@ class Ant_BR(env.Env):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
-    self.static_agent_policies = kwargs.pop('static_agent_policies', None)
+    self.static_agent_params = kwargs.pop('static_agent_params', None)
     self.jit_inference_fn = kwargs.pop('static_agent_inference_fn')
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 1, 4 # only 1, since the other two legs are a static agent
@@ -104,7 +104,7 @@ class Ant_BR(env.Env):
     return self.n_agents * self.actuators_per_agent
 
   def _sample_static_policy(self, rng):
-    layers = self.static_agent_policies
+    layers = self.static_agent_params
     num_policies = len(layers['num_policies'])
     rng, rng_agent = jp.random_split(rng)
     agent_idx = jax.random.randint(rng_agent, (1,), 0, num_policies).astype(int)
