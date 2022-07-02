@@ -105,14 +105,20 @@ class Ant_BR(env.Env):
     return self.n_agents * self.actuators_per_agent
 
   def _sample_static_policy(self, rng):
-    layers = self.static_agent_params
+    policies = self.static_agent_params
     rng, rng_agent = jp.random_split(rng)
-    agent_idx = jax.random.randint(rng_agent, (1,), 0, layers['num_policies']).astype(int)
-    params = {}
+    agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
+    params = {'policy': {}, 'normalizer': {}}
+    # NN params
     for i in range(5):
-      params['hidden_%d'%i] = dict(
-          kernel=jnp.squeeze(layers['hidden_%d'%i][agent_idx,:-1,:]),
-          bias=jnp.squeeze(layers['hidden_%d'%i][agent_idx,-1,:]))
+      params['policy']['hidden_%d'%i] = dict(
+          kernel=jnp.squeeze(policies['layers']['hidden_%d'%i][agent_idx,:-1,:]),
+          bias=jnp.squeeze(policies['layers']['hidden_%d'%i][agent_idx,-1,:]))
+    # normalizer
+    normalizer = policies['normalizer']
+    params['normalizer'] = tuple(normalizer['steps'][agent_idx], 
+                                 normalizer['mean'][agent_idx], 
+                                 normalizer['variance'][agent_idx])
     return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
