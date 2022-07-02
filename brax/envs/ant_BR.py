@@ -116,9 +116,9 @@ class Ant_BR(env.Env):
           bias=jnp.squeeze(policies['layers']['hidden_%d'%i][agent_idx,-1,:]))
     # normalizer
     normalizer = policies['normalizer']
-    params['normalizer'] = tuple(normalizer['steps'][agent_idx], 
+    params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
                                  normalizer['mean'][agent_idx], 
-                                 normalizer['variance'][agent_idx])
+                                 normalizer['variance'][agent_idx]])
     return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
