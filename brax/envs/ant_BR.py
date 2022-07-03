@@ -108,13 +108,17 @@ class Ant_BR(env.Env):
     policies = self.static_agent_params
     rng, rng_agent = jp.random_split(rng)
     agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
-    params = {'policy': [{}, {}], 'normalizer': {}}
     # NN params
+    agents_params = []
     for j in range(2): # two agents
+      agent_params = {}
       for i in range(5):
-        params['policy'][j]['params']['hidden_%d'%i] = dict(
+        agent_params['hidden_%d'%i] = dict(
+        # params['policy'][j]['params']['hidden_%d'%i] = dict(
             kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
             bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
+      agents_params.append(agent_params)
+    params = dict(policy=agents_params)
     # normalizer
     normalizer = policies['normalizer']
     params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
