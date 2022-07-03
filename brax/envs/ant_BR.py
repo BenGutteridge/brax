@@ -110,10 +110,11 @@ class Ant_BR(env.Env):
     agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
     params = {'policy': {}, 'normalizer': {}}
     # NN params
-    for i in range(5):
-      params['policy']['hidden_%d'%i] = dict(
-          kernel=jnp.squeeze(policies['layers']['hidden_%d'%i][agent_idx,:-1,:]),
-          bias=jnp.squeeze(policies['layers']['hidden_%d'%i][agent_idx,-1,:]))
+    for j in range(2): # two agents
+      for i in range(5):
+        params['policy'][j]['params']['hidden_%d'%i] = dict(
+            kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
+            bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
     # normalizer
     normalizer = policies['normalizer']
     params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
