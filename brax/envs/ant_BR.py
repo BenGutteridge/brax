@@ -106,10 +106,9 @@ class Ant_BR(env.Env):
 
   def _sample_static_policy(self, rng):
     policies = self.static_agent_params
-    print(policies.keys())
     rng, rng_agent = jp.random_split(rng)
     agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
-    params = {'policy': {}, 'normalizer': {}}
+    params = {'policy': [{}, {}], 'normalizer': {}}
     # NN params
     for j in range(2): # two agents
       for i in range(5):
