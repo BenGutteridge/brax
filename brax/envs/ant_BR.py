@@ -73,6 +73,7 @@ class Ant_BR(env.Env):
     # getting actions for static agent
     rng, act_rng = jp.random_split(state.info['rng'])
     static_policy = state.info['static_agent_policy']
+    static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
     act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)[self.actuators_per_agent:]
     action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
     # take step
@@ -111,14 +112,13 @@ class Ant_BR(env.Env):
     # NN params
     agents_params = []
     for j in range(2): # two agents
-      agent_params = {'params':{}}
+      agent_params = {}
       for i in range(5):
-        agent_params['params']['hidden_%d'%i] = dict(
-        # params['policy'][j]['params']['hidden_%d'%i] = dict(
+        agent_params['hidden_%d'%i] = dict(
             kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
             bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
       agents_params.append(agent_params)
-    params = dict(params=dict(policy=agents_params))
+    params = dict(policy=agents_params)
     # normalizer
     normalizer = policies['normalizer']
     params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
