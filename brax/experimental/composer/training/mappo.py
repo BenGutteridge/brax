@@ -575,6 +575,7 @@ def make_inference_fn(
         actions[k] = parametric_action_distribution.sample(
           policy_model.apply(policy_params[i], obs), key)
         print('i, k policy_params[i]\n', i, k, policy_params[i])
+        input('Continue...')
       except:
         print('DID NOT WORK\ni, k policy_params[i]\n', i, k, policy_params[i])
         input('Continue...')
