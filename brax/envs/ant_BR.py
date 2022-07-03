@@ -74,7 +74,7 @@ class Ant_BR(env.Env):
     rng, act_rng = jp.random_split(state.info['rng'])
     static_policy = state.info['static_agent_policy']
     static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
-    act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)[self.actuators_per_agent:]
+    act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
     action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
     # take step
     qp, info = self.sys.step(state.qp, action)
@@ -121,9 +121,9 @@ class Ant_BR(env.Env):
     params = dict(policy=agents_params)
     # normalizer
     normalizer = policies['normalizer']
-    params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
-                                 normalizer['mean'][agent_idx], 
-                                 normalizer['variance'][agent_idx]])
+    params['normalizer'] = tuple([normalizer['steps'][agent_idx].squeeze(), 
+                                 normalizer['mean'][agent_idx].squeeze(), 
+                                 normalizer['variance'][agent_idx].squeeze()])
     return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
