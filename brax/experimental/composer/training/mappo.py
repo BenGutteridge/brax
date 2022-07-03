@@ -571,8 +571,14 @@ def make_inference_fn(
     actions = odict()
     for i, (k, (parametric_action_distribution,
                 policy_model)) in enumerate(agents.items()):
-      actions[k] = parametric_action_distribution.sample(
+      try:
+        actions[k] = parametric_action_distribution.sample(
           policy_model.apply(policy_params[i], obs), key)
+        print('i, k policy_params[i]\n', i, k, policy_params[i])
+      except:
+        print('DID NOT WORK\ni, k policy_params[i]\n', i, k, policy_params[i])
+        input('Continue...')
+
     actions_arr = jnp.zeros(obs.shape[:-1] + (action_size,))
     actions = data_utils.fill_array(actions, actions_arr, action_shapes)
     return actions
