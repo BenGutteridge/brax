@@ -113,8 +113,8 @@ class Ant_BR(env.Env):
     for j in range(2): # two agents
       for i in range(5):
         params['policy'][j]['params']['hidden_%d'%i] = dict(
-            kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
-            bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
+            kernel=jnp.squeeze(policies['params']['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
+            bias=jnp.squeeze(policies['params']['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
     # normalizer
     normalizer = policies['normalizer']
     params['normalizer'] = tuple([normalizer['steps'][agent_idx], 
