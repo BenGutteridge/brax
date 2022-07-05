@@ -304,7 +304,7 @@ def train(environment_fn: Callable[..., envs.Env],
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     normalizer_params = jax.tree_map(lambda x: x[0], normalizer_params)
     extra_params = jax.tree_map(lambda x: x[0], extra_params)
-    (state, _, _, _, key), _ = jax.lax.scan(
+    (state, _, _, _, key), _ = jax.lax.scan( # basically a fancy for loop
         do_one_step_eval,
         (state, policy_params, normalizer_params, extra_params, key), (),
         length=episode_length // action_repeat)

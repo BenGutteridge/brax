@@ -21,6 +21,7 @@ from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes
 from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
+import copy
 
 class Ant_BR(env.Env):
   """Trains half an ant to run, training with a pool of static agents"""
@@ -72,7 +73,7 @@ class Ant_BR(env.Env):
     """Run one timestep of the environment's dynamics."""
     # getting actions for static agent
     rng, act_rng = jp.random_split(state.info['rng'])
-    static_policy = state.info['static_agent_policy']
+    static_policy = copy.deepcopy(state.info['static_agent_policy'])
     static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
     act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
     action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
