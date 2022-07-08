@@ -32,6 +32,7 @@ class Ant_BR(env.Env):
     static_agent_params = kwargs.pop('static_agent_params', None)
     self.static_agent_params = static_agent_params['params']
     self.jit_inference_fn = static_agent_params['inference_fn']
+    self.xdir = kwargs.pop('xdir', False)
     super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 1, 4 # only 1, since the other two legs are a static agent
@@ -81,8 +82,8 @@ class Ant_BR(env.Env):
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
     # rewards moving any dist away from origin, not just +x
-    dist_before = norm(state.qp.pos[0])
-    dist_after = norm(qp.pos[0])
+    dist_before = norm(state.qp.pos[0]) if not self.xdir else state.qp.pos[0,0]
+    dist_after = norm(qp.pos[0]) if not self.xdir else qp.pos[0,0]
     forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
