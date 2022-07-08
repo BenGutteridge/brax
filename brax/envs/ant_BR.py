@@ -32,7 +32,7 @@ class Ant_BR(env.Env):
     static_agent_params = kwargs.pop('static_agent_params', None)
     self.static_agent_params = static_agent_params['params']
     self.jit_inference_fn = static_agent_params['inference_fn']
-    self.xdir = kwargs.pop('xdir', False)
+    self.xdir = bool(kwargs.pop('xdir', False))
     super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 1, 4 # only 1, since the other two legs are a static agent
