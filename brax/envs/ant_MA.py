@@ -27,7 +27,7 @@ class Ant_MA(env.Env):
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
-    self.xdir = bool(kwargs.pop('go_x_dir', False))
+    self.xdir = bool(kwargs.pop('xdir', False))
     print('Optimising for x direction only: ', self.xdir)
     super().__init__(config=config, **kwargs)
     if is_multiagent:
