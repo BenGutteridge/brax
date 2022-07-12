@@ -476,7 +476,7 @@ def train(environment_fn: Callable[..., envs.Env],
   sps = 0
   eval_sps = 0
   # *** BEN EDIT ***
-  # losses = [] # OG
+  losses = [] # OG
   all_losses = []
   # BEN EDIT END ***
   state = first_state
@@ -536,7 +536,8 @@ def train(environment_fn: Callable[..., envs.Env],
     previous_step = training_state.normalizer_params[0][0]
     # optimization
     (training_state, state), losses = minimize_loop(training_state, state) # ***************** TRAINING LOOP *******************
-    losses = jax.tree_map(lambda x: x.block_until_ready(), losses)
+    jax.tree_map(lambda x: x.block_until_ready(), losses)
+    print(losses)
     all_losses.append(losses) # BEN
 
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
