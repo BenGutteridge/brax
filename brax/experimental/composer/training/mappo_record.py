@@ -56,7 +56,7 @@ class Agent:
   init_params: Any
   grad_loss: Any
 
-# *** BEN EDIT (also changed every ppo.StepData to this one) ***
+# *** BEN EDIT (also changed every ppo.StepData to this one)  ***
 @flax.struct.dataclass
 class StepData:
   """Contains data for one environment step."""
