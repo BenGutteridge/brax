@@ -70,7 +70,7 @@ _envs = {
     'ant_MA': ant_MA.Ant_MA,
     'ant_BR': ant_BR.Ant_BR,
     'ant_fetch': ant_fetch.AntFetch,
-    'ant_fetch_BR': ant_fetch.AntFetchBR,
+    'ant_fetch_BR': ant_fetch_BR.AntFetchBR,
 }
 
 
