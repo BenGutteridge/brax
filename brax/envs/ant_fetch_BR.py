@@ -22,7 +22,7 @@ import copy
 from brax import jumpy as jp
 from brax import math
 from brax.envs import env
-from brax.ben_utils.utils import make_group_action_shapes
+from brax.ben_utils.utils import make_group_action_shapes, sample_static_policy
 from jax import numpy as jnp
 
 
@@ -38,7 +38,7 @@ class AntFetchBR(env.Env):
     self.static_agent_params = static_agent_params['params']
     self.jit_inference_fn = static_agent_params['inference_fn']
     if is_multiagent:
-      self.n_agents, self.actuators_per_agent = 1, 4
+      self.n_agents, self.actuators_per_agent, self.total_n_actuators = 1, 4, 8
       players = ['agent_%d' % i for i in range(self.n_agents)]
       self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
       self.is_multiagent = True
@@ -76,12 +76,15 @@ class AntFetchBR(env.Env):
     return env.State(qp, obs, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
-    # getting actions for static agent
+     # getting actions for static agent
+    assert len(action) == self.n_agents * self.actuators_per_agent, "Action from training policy wrong size: len(action) = %d" % len(action)    
     rng, act_rng = jp.random_split(state.info['rng'])
     static_policy = copy.deepcopy(state.info['static_agent_policy'])
     static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
     act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
-    action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
+    assert len(act_static) == self.total_n_actuators, "Action from static policy wrong size: len(act_static) = %d" % len(act_static)
+    action = jp.concatenate([action]+[act_static[self.actuators_per_agent:]])
+    assert len(action) == self.total_n_actuators, "Action before calling step() wrong size: len(action) = %d" % len(action)    
     # take step
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
@@ -130,6 +133,10 @@ class AntFetchBR(env.Env):
   @property
   def action_size(self):
     return self.n_agents * self.actuators_per_agent
+
+  def _sample_static_policy(self, rng):
+    params, agent_idx, rng = sample_static_policy(self, rng)
+    return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Egocentric observation of target and the ant's body."""
