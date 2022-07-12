@@ -19,7 +19,7 @@ import brax
 import jax
 from brax import jumpy as jp
 from brax.envs import env
-from brax.ben_utils.utils import make_group_action_shapes
+from brax.ben_utils.utils import make_group_action_shapes, sample_static_policy
 from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
 import copy
@@ -112,24 +112,7 @@ class Ant_BR(env.Env):
     return self.n_agents * self.actuators_per_agent
 
   def _sample_static_policy(self, rng):
-    policies = self.static_agent_params
-    rng, rng_agent = jp.random_split(rng)
-    agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
-    # NN params
-    agents_params = []
-    for j in range(2): # two agents
-      agent_params = {}
-      for i in range(5):
-        agent_params['hidden_%d'%i] = dict(
-            kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
-            bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
-      agents_params.append(agent_params)
-    params = dict(policy=agents_params)
-    # normalizer
-    normalizer = policies['normalizer']
-    params['normalizer'] = tuple([normalizer['steps'][agent_idx].squeeze(), 
-                                 normalizer['mean'][agent_idx].squeeze(), 
-                                 normalizer['variance'][agent_idx].squeeze()])
+    params, agent_idx, rng = sample_static_policy(self, rng)
     return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
