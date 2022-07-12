@@ -41,6 +41,7 @@ from brax.envs import pitm_throw
 from brax.envs import ant_MA
 from brax.envs import ant_BR
 from brax.envs import ant_fetch
+from brax.envs import ant_fetch_BR
 from brax.envs import wrappers
 from brax.envs.env import Env, State, Wrapper
 import gym
@@ -69,6 +70,7 @@ _envs = {
     'ant_MA': ant_MA.Ant_MA,
     'ant_BR': ant_BR.Ant_BR,
     'ant_fetch': ant_fetch.AntFetch,
+    'ant_fetch_BR': ant_fetch.AntFetchBR,
 }
 
 

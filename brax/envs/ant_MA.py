@@ -60,6 +60,7 @@ class Ant_MA(env.Env):
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
+    assert len(action) == 8, "Action before calling step() wrong size, should be 8:\n len(action) = %d" % len(action)  
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
     # option to reward moving any dist away from origin, not just +x
