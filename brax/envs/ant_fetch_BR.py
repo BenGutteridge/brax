@@ -17,6 +17,8 @@
 from typing import Tuple
 
 import brax
+import jax
+import copy
 from brax import jumpy as jp
 from brax import math
 from brax.envs import env
@@ -24,15 +26,19 @@ from brax.ben_utils.utils import make_group_action_shapes
 from jax import numpy as jnp
 
 
-class AntFetch(env.Env):
-  """Fetch trains an ant to run to a target location."""
+class AntFetchBR(env.Env):
+  """Fetch trains half an ant to run to a target location, 
+  the other half is a randomised agent from a pool of static policies"""
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG
     super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    static_agent_params = kwargs.pop('static_agent_params', None)
+    self.static_agent_params = static_agent_params['params']
+    self.jit_inference_fn = static_agent_params['inference_fn']
     if is_multiagent:
-      self.n_agents, self.actuators_per_agent = 2, 4
+      self.n_agents, self.actuators_per_agent = 1, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
       self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
       self.is_multiagent = True
@@ -52,17 +58,31 @@ class AntFetch(env.Env):
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
     reward = jnp.zeros(self.reward_shape)
+    # randomising static agent
+    static_agent_policy, agent_idx, rng = self._sample_static_policy(rng)
+    info = {
+      'static_agent_policy': static_agent_policy,
+      'agent_idx': agent_idx,
+      'rng': rng,
+    } # n.b. different to the other info
     metrics = {
         'hits': zero,
         'weightedHits': zero,
         'movingToTarget': zero,
         'torsoIsUp': zero,
-        'torsoHeight': zero
+        'torsoHeight': zero,
+        'agent_idx': agent_idx,
     }
-    info = {'rng': rng}
     return env.State(qp, obs, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
+    # getting actions for static agent
+    rng, act_rng = jp.random_split(state.info['rng'])
+    static_policy = copy.deepcopy(state.info['static_agent_policy'])
+    static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
+    act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
+    action = jp.concatenate([action[:self.actuators_per_agent]]+[act_static])
+    # take step
     qp, info = self.sys.step(state.qp, action)
     obs = self._get_obs(qp, info)
 
