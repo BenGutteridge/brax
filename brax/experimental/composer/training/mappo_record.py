@@ -469,7 +469,7 @@ def train(environment_fn: Callable[..., envs.Env],
     losses = jax.tree_map(jnp.mean, losses)
     return (training_state, state, counter), losses
 
-  minimize_loop = jax.pmap(_minimize_loop, axis_name='i', static_broadcasted_argnums=2)
+  minimize_loop = jax.pmap(_minimize_loop, axis_name='i')
 
   inference = make_inference_fn(
       core_env.observation_size, action_shapes, normalize_observations,
