@@ -57,25 +57,10 @@ class Agent:
   init_params: Any
   grad_loss: Any
 
-# *** BEN EDIT (also changed every ppo.StepData to this one)  ***
-@flax.struct.dataclass
-class StepData:
-  """Contains data for one environment step."""
-  obs: jnp.ndarray
-  rewards: jnp.ndarray
-  dones: jnp.ndarray
-  truncation: jnp.ndarray
-  actions: jnp.ndarray
-  logits: jnp.ndarray
-  static_policy_idx_counter: jnp.array # BEN CHANGE
-# *** BEN EDIT END ***
-
-
-
 def compute_ppo_loss(
     models: Dict[str, Params],
-    data: StepData,
-    udata: StepData,
+    data: ppo.StepData,
+    udata: ppo.StepData,
     rng: PRNGKey,
     parametric_action_distribution: distribution.ParametricDistribution,
     policy_apply: Any,
@@ -86,7 +71,7 @@ def compute_ppo_loss(
     lambda_: float = 0.95,
     ppo_epsilon: float = 0.3,
     extra_loss_update_ratios: Optional[Dict[str, float]] = None,
-    extra_loss_fns: Optional[Dict[str, Callable[[StepData],
+    extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
                                                 jnp.ndarray]]] = None,
     action_shapes: Dict[str, Dict[str, Any]] = None,
     agent_name: str = None,
@@ -167,7 +152,6 @@ def compute_ppo_loss(
           'policy_loss': policy_loss,
           'value_loss': value_loss,
           'entropy_loss': entropy_loss,
-          'static_policy_idx_counter': data.static_policy_idx_counter
       })
 
 
@@ -202,7 +186,7 @@ def train(environment_fn: Callable[..., envs.Env],
           extra_params: Optional[Dict[str, Dict[str, jnp.ndarray]]] = None,
           extra_step_kwargs: bool = False, # True originally
           extra_loss_update_ratios: Optional[Dict[str, float]] = None,
-          extra_loss_fns: Optional[Dict[str, Callable[[StepData],
+          extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
                                                       jnp.ndarray]]] = None):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -347,18 +331,17 @@ def train(environment_fn: Callable[..., envs.Env],
     nstate = step_fn(state, postprocessed_actions, normalizer_params,
                      extra_params)
 
-    counter = counter.at[state.core.info['static_policy_idx_counter']].add(1) # BEN
+    counter = counter.at[state.core.info['agent_idx']].add(1) # BEN
 
     return (nstate, normalizer_params, policy_params, extra_params, key, 
             counter, # BEN
-            ), StepData(
+            ), ppo.StepData(
                 obs=state.core.obs,
                 rewards=state.core.reward,
                 dones=state.core.done,
                 truncation=state.core.info['truncation'],
                 actions=actions,
                 logits=logits,
-                static_policy_idx_counter=state.core.info['static_policy_idx_counter'] # BEN
                 )
 
   def generate_unroll(carry, unused_target_t):
@@ -378,9 +361,6 @@ def train(environment_fn: Callable[..., envs.Env],
         truncation=jnp.concatenate([
             data.truncation,
             jnp.expand_dims(state.core.info['truncation'], axis=0)]),
-        static_policy_idx_counter=jnp.concatenate(
-            [data.static_policy_idx_counter, 
-            jnp.expand_dims(state.core.info['static_policy_idx_counter'], axis=0)]),
     )
     return (state, normalizer_params, policy_params, extra_params, key, counter), data
 

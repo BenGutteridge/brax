@@ -257,3 +257,10 @@ def sample_static_policy(env, rng):
                                 normalizer['mean'][agent_idx].squeeze(), 
                                 normalizer['variance'][agent_idx].squeeze()])
   return params, agent_idx, rng
+
+def get_total_count(counters):
+  """For counting how many steps are taken for each static policy in training"""
+  total_count = counters[0]
+  for counter in counters[1:]:
+    total_count += counter
+  return jnp.sum(total_count, axis=0)
