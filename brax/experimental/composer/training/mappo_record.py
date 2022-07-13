@@ -495,8 +495,6 @@ def train(environment_fn: Callable[..., envs.Env],
   counter = jnp.zeros(100) # BEN
   counters = []
 
-  vis_traj_key = jax.random.PRNGKey(seed + 42)
-
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
     t = time.time()
@@ -540,10 +538,9 @@ def train(environment_fn: Callable[..., envs.Env],
                                 get_params(training_state, 'policy')),
             extra=jax.tree_map(lambda x: x[0],
                                get_params(training_state, 'extra')))
-        vis_traj_rng, vis_traj_key = jax.random.split(vis_traj_key)
         progress_fn(
             int(training_state.normalizer_params[0][0]) * action_repeat,
-            metrics, params, vis_traj_rng)
+            metrics, params)
 
     if it == log_frequency:
       break
