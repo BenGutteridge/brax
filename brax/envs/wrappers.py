@@ -67,11 +67,12 @@ class EpisodeWrapper(brax_env.Wrapper):
     state.info['steps'] = jp.zeros(())
     state.info['truncation'] = jp.zeros(())
     # *** BEN EDIT ***
+    print("state.info['agent_idx']", state.info['agent_idx'])
     try:
       state.info['static_policy_idx_counter'] = self.env.info['agent_idx']
     except:
       pass
-    state.info['static_policy_idx_counter'] = self.env.info['agent_idx']
+    state.info['static_policy_idx_counter'] = state.info['agent_idx']
     # *** BEN EDIT END ***
     return state
 
