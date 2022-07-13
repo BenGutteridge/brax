@@ -492,6 +492,7 @@ def train(environment_fn: Callable[..., envs.Env],
   metrics = {}
 
   counter = jnp.zeros(100) # BEN
+  counters = []
 
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
@@ -550,7 +551,8 @@ def train(environment_fn: Callable[..., envs.Env],
                                                     counter,
                                                     ) # ***************** TRAINING LOOP *******************
     jax.tree_map(lambda x: x.block_until_ready(), losses)
-    print(counter)
+    print('counter:': counter)
+    counters.append(counter)
     all_losses.append(losses) # BEN
 
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
@@ -578,6 +580,7 @@ def train(environment_fn: Callable[..., envs.Env],
 
   return (inference, params, metrics, 
           all_losses, # BEN
+          counters, # BEN
           ) 
 
 
