@@ -21,6 +21,7 @@ from collections import OrderedDict as odict
 import functools
 import time
 from typing import Any, Callable, Counter, Dict, Optional, Tuple
+from brax.ben_utils.utils import get_total_count
 
 from absl import logging
 from brax import envs
@@ -578,6 +579,8 @@ def train(environment_fn: Callable[..., envs.Env],
     x = jnp.ones([jax.local_device_count()])
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
+
+  counters = get_total_count(counters)
 
   return (inference, params, metrics, 
           all_losses, # BEN
