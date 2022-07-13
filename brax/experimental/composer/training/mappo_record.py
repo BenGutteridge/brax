@@ -372,8 +372,11 @@ def train(environment_fn: Callable[..., envs.Env],
             [data.dones, jnp.expand_dims(state.core.done, axis=0)]),
         truncation=jnp.concatenate([
             data.truncation,
-            jnp.expand_dims(state.core.info['truncation'], axis=0)
-        ]))
+            jnp.expand_dims(state.core.info['truncation'], axis=0)]),
+        static_policy_idx_counter=jnp.concatenate(
+            [data.static_policy_idx_counter, 
+            jnp.expand_dims(state.core.info['static_policy_idx_counter'], axis=0)]),
+    )
     return (state, normalizer_params, policy_params, extra_params, key), data
 
   def update_model(carry, data_tuple):
