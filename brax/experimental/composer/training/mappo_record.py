@@ -551,7 +551,7 @@ def train(environment_fn: Callable[..., envs.Env],
                                                     counter,
                                                     ) # ***************** TRAINING LOOP *******************
     jax.tree_map(lambda x: x.block_until_ready(), losses)
-    print('counter:': counter)
+    print('counter:\n', counter)
     counters.append(counter)
     all_losses.append(losses) # BEN
 
