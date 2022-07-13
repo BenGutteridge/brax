@@ -466,10 +466,7 @@ def train(environment_fn: Callable[..., envs.Env],
   eval_walltime = 0
   sps = 0
   eval_sps = 0
-  # *** BEN EDIT ***
-  losses = [] # OG
-  all_losses = []
-  # BEN EDIT END ***
+  losses = []
   state = first_state
   metrics = {}
 
@@ -529,13 +526,10 @@ def train(environment_fn: Callable[..., envs.Env],
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
-    (training_state, state), counter, losses = minimize_loop(training_state, state, 
-                                                    # counter,
-                                                    ) # ***************** TRAINING LOOP *******************
+    (training_state, state), counter, losses = minimize_loop(training_state, state) # ***************** TRAINING LOOP *******************
     jax.tree_map(lambda x: x.block_until_ready(), losses)
-    print('counter:\n', counter)
+    # print('counter:\n', counter)
     counters.append(counter)
-    all_losses.append(losses) # BEN
 
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
            (time.time() - t)) * action_repeat
@@ -560,12 +554,9 @@ def train(environment_fn: Callable[..., envs.Env],
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
 
-  counters = get_total_count(counters)
+  metrics['counters'] = get_total_count(counters)
 
-  return (inference, params, metrics, 
-          all_losses, # BEN
-          counters, # BEN
-          ) 
+  return (inference, params, metrics) 
 
 
 def make_inference_fn(
