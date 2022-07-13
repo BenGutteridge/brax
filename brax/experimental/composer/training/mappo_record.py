@@ -462,7 +462,8 @@ def train(environment_fn: Callable[..., envs.Env],
   num_epochs = num_timesteps // (
       batch_size * unroll_length * num_minibatches * action_repeat)
 
-  def _minimize_loop(training_state, state, counter): # BEN
+  def _minimize_loop(training_state, state): # BEN
+    counter = jnp.zeros(100)
     (training_state, state, counter), losses = jax.lax.scan(
         run_epoch, (training_state, state, counter), (),
         length=num_epochs // log_frequency)
@@ -548,7 +549,7 @@ def train(environment_fn: Callable[..., envs.Env],
     previous_step = training_state.normalizer_params[0][0]
     # optimization
     (training_state, state), counter, losses = minimize_loop(training_state, state, 
-                                                    counter,
+                                                    # counter,
                                                     ) # ***************** TRAINING LOOP *******************
     jax.tree_map(lambda x: x.block_until_ready(), losses)
     print('counter:\n', counter)
