@@ -14,7 +14,6 @@
 
 """Trains an ant to run in the +x direction."""
 
-from sre_constants import ASSERT
 import brax
 import jax
 from brax import jumpy as jp
