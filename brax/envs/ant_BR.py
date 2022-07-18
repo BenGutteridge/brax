@@ -16,6 +16,7 @@
 
 import brax
 import jax
+from jax.lax import dynamic_slice, dynamic_update_slice
 from brax import jumpy as jp
 from brax.envs import env
 from brax.ben_utils.utils import make_group_action_shapes, sample_static_policy
@@ -33,6 +34,7 @@ class Ant_BR(env.Env):
     self.static_agent_params = static_agent_params['params']
     self.jit_inference_fn = static_agent_params['inference_fn']
     self.xdir = bool(kwargs.pop('xdir', False))
+    self.BR_agent_idx = int(kwargs.pop('BR_agent_idx', 0)) # default 1st agent
     super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent, self.total_n_actuators = 1, 4, 8 # only 1, since the other two legs are a static agent
@@ -79,10 +81,15 @@ class Ant_BR(env.Env):
     static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
     act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
     assert len(act_static) == self.total_n_actuators, "Action from static policy wrong size: len(act_static) = %d" % len(act_static)
-    action = jp.concatenate([action]+[act_static[self.actuators_per_agent:]])
-    assert len(action) == self.total_n_actuators, "Action before calling step() wrong size: len(action) = %d" % len(action)    
+    BR_idx = self.BR_agent_idx * self.actuators_per_agent                 # 0 or 4
+    static_idx = (self.BR_agent_idx - 1) ** 2 * self.actuators_per_agent  # 4 or 0
+    final_act_static = dynamic_slice(act_static, (static_idx,), (self.actuators_per_agent,)) # just set to 4 if it doesn't work
+    final_action = jnp.zeros(self.total_n_actuators)
+    final_action = dynamic_update_slice(final_action, action, (BR_idx,))               # BR action
+    final_action = dynamic_update_slice(final_action, final_act_static, (static_idx,)) # static agent action
+    assert len(final_action) == self.total_n_actuators, "Action before calling step() wrong size: len(final_action) = %d" % len(final_action)    
     # take step
-    qp, info = self.sys.step(state.qp, action)
+    qp, info = self.sys.step(state.qp, final_action)
     obs = self._get_obs(qp, info)
     # rewards moving any dist away from origin, not just +x
     dist_before = norm(state.qp.pos[0]) if not self.xdir else state.qp.pos[0,0]
