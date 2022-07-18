@@ -43,8 +43,8 @@ class Ant_BR(env.Env):
       self.is_multiagent = True
       self.reward_shape = (len(self.group_action_shapes),)
     else: self.reward_shape = 1
-    print('xdir': self.xdir)
-    print('BR_agent_idx': self.BR_agent_idx)
+    print('xdir: ', self.xdir)
+    print('BR_agent_idx:', self.BR_agent_idx)
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
@@ -86,6 +86,7 @@ class Ant_BR(env.Env):
     BR_idx = self.BR_agent_idx * self.actuators_per_agent                 # 0 or 4
     static_idx = (self.BR_agent_idx - 1) ** 2 * self.actuators_per_agent  # 4 or 0
     final_act_static = dynamic_slice(act_static, (static_idx,), (self.actuators_per_agent,)) # just set to 4 if it doesn't work
+    assert len(final_act_static) == self.actuators_per_agent, "Action from static policy *single agent* wrong size: len(final_act_static) = %d" % len(final_act_static)
     final_action = jnp.zeros(self.total_n_actuators)
     final_action = dynamic_update_slice(final_action, action, (BR_idx,))               # BR action
     final_action = dynamic_update_slice(final_action, final_act_static, (static_idx,)) # static agent action
