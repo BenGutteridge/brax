@@ -15,28 +15,36 @@
 """Trains an ant to run in the +x direction."""
 
 import brax
+import jax
+from jax.lax import dynamic_slice, dynamic_update_slice
 from brax import jumpy as jp
 from brax.envs import env
-from brax.ben_utils.utils import make_group_action_shapes
+from brax.ben_utils.utils import make_group_action_shapes, sample_static_policy
 from jax import numpy as jnp
 from brax.jumpy import safe_norm as norm
+import copy
 
-class Ant_MA(env.Env):
-  """Trains an ant to run in any direction."""
+class Ant_BR(env.Env):
+  """Trains half an ant to run, training with a pool of static agents"""
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG_SPRING if legacy_spring else _SYSTEM_CONFIG
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    static_agent_params = kwargs.pop('static_agent_params', None)
+    self.static_agent_params = static_agent_params['params']
+    self.jit_inference_fn = static_agent_params['inference_fn']
     self.xdir = bool(kwargs.pop('xdir', False))
-    print('Optimising for x direction only: ', self.xdir)
+    self.BR_agent_idx = int(kwargs.pop('BR_agent_idx', 0)) # default 1st agent
     super().__init__(config=config, **kwargs)
     if is_multiagent:
-      self.n_agents, self.actuators_per_agent = 2, 4
+      self.n_agents, self.actuators_per_agent, self.total_n_actuators = 1, 4, 8 # only 1, since the other two legs are a static agent
       players = ['agent_%d' % i for i in range(self.n_agents)]
       self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
       self.is_multiagent = True
       self.reward_shape = (len(self.group_action_shapes),)
     else: self.reward_shape = 1
+    print('xdir: ', self.xdir)
+    print('BR_agent_idx:', self.BR_agent_idx)
 
   def reset(self, rng: jp.ndarray) -> env.State:
     """Resets the environment to an initial state."""
@@ -50,22 +58,45 @@ class Ant_MA(env.Env):
     obs = self._get_obs(qp, info)
     done, zero = jp.zeros(2)
     reward = jnp.zeros(self.reward_shape)
+    # randomising static agent
+    static_agent_policy, agent_idx, rng = self._sample_static_policy(rng)
+    info = {
+      'static_agent_policy': static_agent_policy,
+      'agent_idx': agent_idx,
+      'rng': rng,
+    } # n.b. different to the other info
     metrics = {
         'reward_ctrl_cost': zero,
         'reward_contact_cost': zero,
         'reward_forward': zero,
         'reward_survive': zero,
+        'agent_idx': agent_idx,
     }
-    return env.State(qp, obs, reward, done, metrics)
+    return env.State(qp, obs, reward, done, metrics, info)
 
   def step(self, state: env.State, action: jp.ndarray) -> env.State:
     """Run one timestep of the environment's dynamics."""
-    assert len(action) == 8, "Action before calling step() wrong size, should be 8:\n len(action) = %d" % len(action)  
-    qp, info = self.sys.step(state.qp, action)
+    # getting actions for static agent
+    assert len(action) == self.n_agents * self.actuators_per_agent, "Action from training policy wrong size: len(action) = %d" % len(action)    
+    rng, act_rng = jp.random_split(state.info['rng'])
+    static_policy = copy.deepcopy(state.info['static_agent_policy'])
+    static_policy['policy'] = [{'params': agent_params} for agent_params in static_policy['policy']] # reshaping
+    act_static = self.jit_inference_fn(static_policy, state.obs, act_rng)
+    assert len(act_static) == self.total_n_actuators, "Action from static policy wrong size: len(act_static) = %d" % len(act_static)
+    BR_idx = self.BR_agent_idx * self.actuators_per_agent                 # 0 or 4
+    static_idx = (self.BR_agent_idx - 1) ** 2 * self.actuators_per_agent  # 4 or 0
+    final_act_static = dynamic_slice(act_static, (static_idx,), (self.actuators_per_agent,)) # just set to 4 if it doesn't work
+    assert len(final_act_static) == self.actuators_per_agent, "Action from static policy *single agent* wrong size: len(final_act_static) = %d" % len(final_act_static)
+    final_action = jnp.zeros(self.total_n_actuators)
+    final_action = dynamic_update_slice(final_action, action, (BR_idx,))               # BR action
+    final_action = dynamic_update_slice(final_action, final_act_static, (static_idx,)) # static agent action
+    assert len(final_action) == self.total_n_actuators, "Action before calling step() wrong size: len(final_action) = %d" % len(final_action)    
+    # take step
+    qp, info = self.sys.step(state.qp, final_action)
     obs = self._get_obs(qp, info)
-    # option to reward moving any dist away from origin, not just +x
-    dist_before = norm(state.qp.pos[0]) if not self.xdir else state.qp.pos[0, 0]
-    dist_after = norm(qp.pos[0]) if not self.xdir else qp.pos[0, 0]
+    # rewards moving any dist away from origin, not just +x
+    dist_before = norm(state.qp.pos[0]) if not self.xdir else state.qp.pos[0,0]
+    dist_after = norm(qp.pos[0]) if not self.xdir else qp.pos[0,0]
     forward_reward = (dist_after - dist_before) / self.sys.config.dt
     ctrl_cost = .5 * jp.sum(jp.square(action))
     contact_cost = (0.5 * 1e-3 *
@@ -81,12 +112,17 @@ class Ant_MA(env.Env):
         reward_contact_cost=contact_cost,
         reward_forward=forward_reward,
         reward_survive=survive_reward)
+    state.info.update(rng=rng)
 
     return state.replace(qp=qp, obs=obs, reward=reward, done=done)
 
   @property
   def action_size(self):
     return self.n_agents * self.actuators_per_agent
+
+  def _sample_static_policy(self, rng):
+    params, agent_idx, rng = sample_static_policy(self, rng)
+    return params, agent_idx, rng
 
   def _get_obs(self, qp: brax.QP, info: brax.Info) -> jp.ndarray:
     """Observe ant body position and velocities."""

@@ -20,7 +20,8 @@
 from collections import OrderedDict as odict
 import functools
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Counter, Dict, Optional, Tuple
+from brax.ben_utils.utils import get_total_count
 
 from absl import logging
 from brax import envs
@@ -55,7 +56,6 @@ class Agent:
   optimizer_state: Any
   init_params: Any
   grad_loss: Any
-
 
 def compute_ppo_loss(
     models: Dict[str, Params],
@@ -311,7 +311,7 @@ def train(environment_fn: Callable[..., envs.Env],
     return state, key
 
   def do_one_step(carry, unused_target_t):
-    state, normalizer_params, policy_params, extra_params, key = carry
+    state, normalizer_params, policy_params, extra_params, key, counter = carry
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
     logits, actions, postprocessed_actions = [], [], odict()
@@ -330,20 +330,25 @@ def train(environment_fn: Callable[..., envs.Env],
                                                   action_shapes)
     nstate = step_fn(state, postprocessed_actions, normalizer_params,
                      extra_params)
-    return (nstate, normalizer_params, policy_params, extra_params,
-            key), ppo.StepData(
+
+    counter = counter.at[state.core.info['agent_idx']].add(1) # BEN
+
+    return (nstate, normalizer_params, policy_params, extra_params, key, 
+            counter, # BEN
+            ), ppo.StepData(
                 obs=state.core.obs,
                 rewards=state.core.reward,
                 dones=state.core.done,
                 truncation=state.core.info['truncation'],
                 actions=actions,
-                logits=logits)
+                logits=logits,
+                )
 
   def generate_unroll(carry, unused_target_t):
-    state, normalizer_params, policy_params, extra_params, key = carry
-    (state, _, _, _, key), data = jax.lax.scan(
+    state, normalizer_params, policy_params, extra_params, key, counter = carry
+    (state, _, _, _, key, counter), data = jax.lax.scan(
         do_one_step,
-        (state, normalizer_params, policy_params, extra_params, key), (),
+        (state, normalizer_params, policy_params, extra_params, key, counter), (),
         length=unroll_length)
     data = data.replace(
         obs=jnp.concatenate([data.obs,
@@ -355,9 +360,9 @@ def train(environment_fn: Callable[..., envs.Env],
             [data.dones, jnp.expand_dims(state.core.done, axis=0)]),
         truncation=jnp.concatenate([
             data.truncation,
-            jnp.expand_dims(state.core.info['truncation'], axis=0)
-        ]))
-    return (state, normalizer_params, policy_params, extra_params, key), data
+            jnp.expand_dims(state.core.info['truncation'], axis=0)]),
+    )
+    return (state, normalizer_params, policy_params, extra_params, key, counter), data
 
   def update_model(carry, data_tuple):
     optimizer_state, params, key = carry
@@ -368,7 +373,7 @@ def train(environment_fn: Callable[..., envs.Env],
       loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
                                                  key_loss)
       metrics.append(agent_metrics)
-      loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
+      loss_grad = jax.lax.pmean(loss_grad, axis_name='i') # pmean - mean across devices. 'i' is a unique identifier but with no special meaning.
       params_update, optimizer_state[i] = optimizer.update(
           loss_grad, optimizer_state[i])
       params[i] = optax.apply_updates(params[i], params_update)
@@ -376,7 +381,7 @@ def train(environment_fn: Callable[..., envs.Env],
     return (optimizer_state, params, key), metrics
 
   def minimize_epoch(carry, unused_t):
-    optimizer_state, params, data, udata, key = carry
+    optimizer_state, params, data, udata, key, counter = carry
     key, key_perm, key_grad = jax.random.split(key, 3)
     permutation = jax.random.permutation(key_perm, data.obs.shape[1])
 
@@ -392,7 +397,7 @@ def train(environment_fn: Callable[..., envs.Env],
     (optimizer_state, params, _), metrics = jax.lax.scan(
         update_model, (optimizer_state, params, key_grad), (ndata, u_ndata),
         length=num_minibatches)
-    return (optimizer_state, params, data, udata, key), metrics
+    return (optimizer_state, params, data, udata, key, counter), metrics
 
   def get_params(state, key, value=None):
     if value is not None:
@@ -400,14 +405,16 @@ def train(environment_fn: Callable[..., envs.Env],
     return [params[key] for params in state.params]
 
   def run_epoch(carry, unused_t):
-    training_state, state = carry
+    training_state, state, counter = carry
     key_minimize, key_generate_unroll, new_key = jax.random.split(
         training_state.key, 3)
-    (state, _, _, _, _), data = jax.lax.scan(
+    (state, _, _, _, _, counter), data = jax.lax.scan(
         generate_unroll,
         (state, training_state.normalizer_params,
          get_params(training_state, 'policy'),
-         get_params(training_state, 'extra', {}), key_generate_unroll), (),
+         get_params(training_state, 'extra', {}), key_generate_unroll, 
+         counter), # BEN
+         (),
         length=batch_size * num_minibatches // num_envs)
     # make unroll first
     data = jax.tree_map(lambda x: jnp.swapaxes(x, 0, 1), data)
@@ -421,9 +428,9 @@ def train(environment_fn: Callable[..., envs.Env],
     data = data.replace(
         obs=obs_normalizer_apply_fn(normalizer_params, data.obs))
 
-    (optimizer_state, params, _, _, _), metrics = jax.lax.scan(
+    (optimizer_state, params, _, _, _, counter), metrics = jax.lax.scan(
         minimize_epoch, (training_state.optimizer_state, training_state.params,
-                         data, udata, key_minimize), (),
+                         data, udata, key_minimize, counter), (),
         length=num_update_epochs)
 
     new_training_state = TrainingState(
@@ -431,17 +438,18 @@ def train(environment_fn: Callable[..., envs.Env],
         params=params,
         normalizer_params=normalizer_params,
         key=new_key)
-    return (new_training_state, state), metrics
+    return (new_training_state, state, counter), metrics
 
   num_epochs = num_timesteps // (
       batch_size * unroll_length * num_minibatches * action_repeat)
 
-  def _minimize_loop(training_state, state):
-    (training_state, state), losses = jax.lax.scan(
-        run_epoch, (training_state, state), (),
+  def _minimize_loop(training_state, state): # BEN
+    counter = jnp.zeros(100)
+    (training_state, state, counter), losses = jax.lax.scan(
+        run_epoch, (training_state, state, counter), (),
         length=num_epochs // log_frequency)
     losses = jax.tree_map(jnp.mean, losses)
-    return (training_state, state), losses
+    return (training_state, state), counter, losses
 
   minimize_loop = jax.pmap(_minimize_loop, axis_name='i')
 
@@ -461,6 +469,9 @@ def train(environment_fn: Callable[..., envs.Env],
   losses = []
   state = first_state
   metrics = {}
+
+  counter = jnp.zeros(100) # BEN
+  counters = []
 
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
@@ -515,8 +526,11 @@ def train(environment_fn: Callable[..., envs.Env],
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
-    (training_state, state), losses = minimize_loop(training_state, state) # ***************** TRAINING LOOP *******************
+    (training_state, state), counter, losses = minimize_loop(training_state, state) # ***************** TRAINING LOOP *******************
     jax.tree_map(lambda x: x.block_until_ready(), losses)
+    # print('counter:\n', counter)
+    counters.append(counter)
+
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
            (time.time() - t)) * action_repeat
     training_walltime += time.time() - t
@@ -540,7 +554,9 @@ def train(environment_fn: Callable[..., envs.Env],
     x = jax.device_get(jax.pmap(lambda x: jax.lax.psum(x, 'i'), 'i')(x))
     assert x[0] == jax.device_count()
 
-  return (inference, params, metrics)
+  metrics['counters'] = get_total_count(counters)
+
+  return (inference, params, metrics) 
 
 
 def make_inference_fn(

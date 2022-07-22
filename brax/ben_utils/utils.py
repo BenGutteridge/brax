@@ -2,6 +2,7 @@ import brax
 import jax
 import sys
 import numpy as np
+from jax import numpy as jnp
 import matplotlib.pyplot as plt
 import brax.jumpy as jp
 import os
@@ -235,3 +236,31 @@ def list_except_idx(idx, list):
   for i in range(idx+1, len(list)):
     x.append(list[i])
   return x
+
+def sample_static_policy(env, rng):
+  policies = env.static_agent_params
+  rng, rng_agent = jp.random_split(rng)
+  agent_idx = jax.random.randint(rng_agent, (1,), 0, policies['num_policies']).astype(int)
+  # NN params
+  agents_params = []
+  for j in range(2): # two agents
+    agent_params = {}
+    for i in range(5):
+      agent_params['hidden_%d'%i] = dict(
+          kernel=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,:-1,:]),
+          bias=jnp.squeeze(policies['layers'][j]['hidden_%d'%i][agent_idx,-1,:]))
+    agents_params.append(agent_params)
+  params = dict(policy=agents_params)
+  # normalizer
+  normalizer = policies['normalizer']
+  params['normalizer'] = tuple([normalizer['steps'][agent_idx].squeeze(), 
+                                normalizer['mean'][agent_idx].squeeze(), 
+                                normalizer['variance'][agent_idx].squeeze()])
+  return params, agent_idx, rng
+
+def get_total_count(counters):
+  """For counting how many steps are taken for each static policy in training"""
+  total_count = counters[0]
+  for counter in counters[1:]:
+    total_count += counter
+  return jnp.sum(total_count, axis=0)
