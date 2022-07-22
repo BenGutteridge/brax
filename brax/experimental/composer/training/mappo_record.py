@@ -373,7 +373,7 @@ def train(environment_fn: Callable[..., envs.Env],
       loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
                                                  key_loss)
       metrics.append(agent_metrics)
-      loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
+      loss_grad = jax.lax.pmean(loss_grad, axis_name='i') # pmean - mean across devices. 'i' is a unique identifier but with no special meaning.
       params_update, optimizer_state[i] = optimizer.update(
           loss_grad, optimizer_state[i])
       params[i] = optax.apply_updates(params[i], params_update)
