@@ -265,6 +265,7 @@ def train(
       pol_num_neurons_per_layer=pol_num_neurons_per_layer,
       val_num_hidden_layers=val_num_hidden_layers,
       val_num_neurons_per_layer=val_num_neurons_per_layer,
+      recurrent = True, ################## BEN ADDITION ######################
       )
   key_policy, key_value = jax.random.split(key_models)
 

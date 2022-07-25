@@ -31,6 +31,30 @@ class FeedForwardModel:
   apply: Any
 
 
+class GRU_MLP(linen.Module):
+  """Standard MLP module with GRU layer inplace of final fully-connected layer."""
+  layer_sizes: Sequence[int]
+  activation: Callable[[jnp.ndarray], jnp.ndarray] = linen.relu
+  kernel_init: Callable[..., Any] = jax.nn.initializers.lecun_uniform()
+  activate_final: bool = False
+  bias: bool = True
+
+  @linen.compact
+  def __call__(self, input: jnp.ndarray, hidden: jnp.ndarray):
+    output = input
+    for i, layer_size in enumerate(self.layer_sizes):
+      output = linen.Dense(
+          layer_size,
+          name=f'fc_{i}',
+          kernel_init=self.kernel_init,
+          use_bias=self.bias)(output)
+      if i != len(self.layer_sizes) - 1 or self.activate_final:
+        output = self.activation(output)
+    # # do recurrent
+    hidden, output = linen.GRUCell(name='gru_layer')(hidden, output)
+    return hidden, output
+
+
 class MLP(linen.Module):
   """MLP module."""
   layer_sizes: Sequence[int]
