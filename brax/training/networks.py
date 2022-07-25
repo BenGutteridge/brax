@@ -105,6 +105,7 @@ def make_model(layer_sizes: Sequence[int],
                obs_size: int,
                activation: Callable[[jnp.ndarray], jnp.ndarray] = linen.swish,
                spectral_norm: bool = False,
+               recurrent: bool = False,
                ) -> FeedForwardModel:
   """Creates a model.
 
@@ -113,12 +114,20 @@ def make_model(layer_sizes: Sequence[int],
     obs_size: size of an observation
     activation: activation
     spectral_norm: whether to use a spectral normalization (default: False).
+    recurrent: whether to use a recurrent layer for the policy (default: False).
 
   Returns:
     a model
   """
   dummy_obs = jnp.zeros((1, obs_size))
-  if spectral_norm:
+  assert not (spectral_norm and recurrent) # not supported
+  if recurrent:
+    memory_size = layer_sizes.pop(-1)  # make not-static later
+    dummy_hidden = jnp.zeros(1, memory_size)
+    module = GRU_MLP(layer_sizes, activation)
+    model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),
+                             apply=module.apply)
+  elif spectral_norm:
     module = SNMLP(layer_sizes=layer_sizes, activation=activation)
     model = FeedForwardModel(
         init=lambda rng1, rng2: module.init(
@@ -137,6 +146,7 @@ def make_models(policy_params_size: int,
                 pol_num_neurons_per_layer=32,
                 val_num_hidden_layers=5,
                 val_num_neurons_per_layer = 256,
+                recurrent=False,
                 ) -> Tuple[FeedForwardModel, FeedForwardModel]:
   """Creates models for policy and value functions.
 
@@ -154,7 +164,7 @@ def make_models(policy_params_size: int,
   pol_layer_sizes = [pol_num_neurons_per_layer] * pol_num_hidden_layers + [policy_params_size]
   val_layer_sizes = [val_num_neurons_per_layer] * val_num_hidden_layers + [1]
 
-  policy_model = make_model(pol_layer_sizes, obs_size)
-  value_model = make_model(val_layer_sizes, obs_size)
+  policy_model = make_model(pol_layer_sizes, obs_size, recurrent)
+  value_model = make_model(val_layer_sizes, obs_size) # stick to default for now
   
   return policy_model, value_model

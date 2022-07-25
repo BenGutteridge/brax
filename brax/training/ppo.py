@@ -561,11 +561,13 @@ def make_inference_fn(observation_size, action_size, normalize_observations, **l
         pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
         val_num_hidden_layers=layers["val_num_hidden_layers"],
         val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
+        recurrent = True, ################## BEN ADDITION ######################
         )
   else:
     policy_model, _ = networks.make_models(
         parametric_action_distribution.param_size, 
         observation_size,
+        recurrent = True, ################## BEN ADDITION ######################
         )
 
 
