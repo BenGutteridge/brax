@@ -260,10 +260,6 @@ def train(
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=core_env.action_size)
 
-  print('parametric_action_distribution.param_size (used for last layer of network, i.e. size of dummy_hidden): ', parametric_action_distribution.param_size)
-  print('core_env.action_size (used for generating initial hidden state): ', core_env.action_size)
-  print('eval_env.action_size (used for generating initial hidden state): ', eval_env.action_size)
-
   policy_model, value_model = networks.make_models(
       parametric_action_distribution.param_size,
       core_env.observation_size,
@@ -316,7 +312,8 @@ def train(
                normalizer_params) -> Tuple[envs.State, PRNGKey]:
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-    hidden_state = jnp.zeros(eval_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
+    # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
+    hidden_state = jnp.zeros(parametric_action_distribution.param_size) # Initialising to zero: GRU output (action) = hidden state 
     print('hidden_state (eval): ', hidden_state.shape)
     (state, _, _, key), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
@@ -353,7 +350,7 @@ def train(
     """ generate data by performing `unroll_length` steps"""
     state, normalizer_params, policy_params, key = carry
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-    hidden_state = jnp.zeros(core_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
+    hidden_state = jnp.zeros(parametric_action_distribution.param_size) # Initialising to zero: GRU output (action) = hidden state 
     print('hidden_state (core): ', hidden_state.shape)
     (state, _, _, key, hidden_state), data = jax.lax.scan(
         do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
