@@ -76,7 +76,7 @@ class LSTM_MLP(linen.Module):
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
     # # do recurrent
-    (cell, hidden), output = linen.LSTMCell(name='lstm_layer')(hidden, output)
+    (cell, hidden), output = linen.LSTMCell(name='lstm_layer')((cell, hidden), output)
     return (cell, hidden), output
 
 
@@ -99,8 +99,6 @@ class MLP(linen.Module):
           use_bias=self.bias)(
               hidden)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
-        print('hidden: ', hidden)
-        print('self.activation: ', self.activation)
         hidden = self.activation(hidden)
     return hidden
 
