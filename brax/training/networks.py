@@ -148,14 +148,19 @@ def make_model(layer_sizes: Sequence[int],
   assert not (spectral_norm and recurrent) # not supported
   print('activation: ', activation)
   print('Recurrent? ', recurrent)
+
   if recurrent:
-    print('Using recurrent policy.')
-    input('Continue?')
-    memory_size = layer_sizes.pop(-1)  # make not-static later
-    dummy_hidden = jnp.zeros(1, memory_size)
-    module = GRU_MLP(layer_sizes, activation=activation)
-    model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),
-                             apply=module.apply)
+    if recurrent == 'lstm':
+      print('LSTM not defined yet.')
+      assert False
+    else:
+      print('Using recurrent policy.')
+      input('Continue?')
+      memory_size = layer_sizes.pop(-1)  # make not-static later
+      dummy_hidden = jnp.zeros((1, memory_size_)
+      module = GRU_MLP(layer_sizes, activation=activation)
+      model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),
+                              apply=module.apply)
   elif spectral_norm:
     module = SNMLP(layer_sizes=layer_sizes, activation=activation)
     model = FeedForwardModel(
