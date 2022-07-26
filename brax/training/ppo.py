@@ -260,6 +260,10 @@ def train(
   parametric_action_distribution = distribution.NormalTanhDistribution(
       event_size=core_env.action_size)
 
+  print('parametric_action_distribution.param_size (used for last layer of network, i.e. size of dummy_hidden): ', parametric_action_distribution.param_size)
+  print('core_env.action_size (used for generating initial hidden state): ', core_env.action_size)
+  print('eval_env.action_size (used for generating initial hidden state): ', eval_env.action_size)
+
   policy_model, value_model = networks.make_models(
       parametric_action_distribution.param_size,
       core_env.observation_size,
@@ -302,10 +306,10 @@ def train(
     # TODO: Make this nicer ([0] comes from pmapping).
     obs = obs_normalizer_apply_fn(
         jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
-    logits = policy_model.apply(policy_params, obs, hidden_state)
+    logits, hidden_state = policy_model.apply(policy_params, obs, hidden_state)
     actions = parametric_action_distribution.sample(logits, key_sample)
     nstate = eval_step_fn(state, actions)
-    return (nstate, policy_params, normalizer_params, key), ()
+    return (nstate, policy_params, normalizer_params, key, hidden_state), ()
 
   @jax.jit
   def run_eval(state, key, policy_params,
@@ -313,6 +317,7 @@ def train(
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     hidden_state = jnp.zeros(eval_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
+    print('hidden_state (eval): ', hidden_state.shape)
     (state, _, _, key), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
         length=episode_length // action_repeat)
@@ -349,6 +354,7 @@ def train(
     state, normalizer_params, policy_params, key = carry
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     hidden_state = jnp.zeros(core_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
+    print('hidden_state (core): ', hidden_state.shape)
     (state, _, _, key, hidden_state), data = jax.lax.scan(
         do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
         length=unroll_length)
