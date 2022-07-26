@@ -64,7 +64,8 @@ class LSTM_MLP(linen.Module):
   bias: bool = True
 
   @linen.compact
-  def __call__(self, input: jnp.ndarray, hidden: jnp.ndarray):
+  def __call__(self, input: jnp.ndarray, carry: jnp.ndarray):
+    cell, hidden = carry
     output = input
     for i, layer_size in enumerate(self.layer_sizes):
       output = linen.Dense(
@@ -75,8 +76,8 @@ class LSTM_MLP(linen.Module):
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
     # # do recurrent
-    hidden, output = linen.GRUCell(name='gru_layer')(hidden, output)
-    return hidden, output
+    (cell, hidden), output = linen.LSTMCell(name='lstm_layer')(hidden, output)
+    return (cell, hidden), output
 
 
 class MLP(linen.Module):
@@ -147,8 +148,10 @@ def make_model(layer_sizes: Sequence[int],
   """
   dummy_obs = jnp.zeros((1, obs_size))
   assert not (spectral_norm and recurrent) # not supported
+  print('activation: ', activation)
+  print('Recurrent? ', recurrent)
   if recurrent:
-    print('Using recurrent policy')
+    print('Using recurrent policy.')
     input('Continue?')
     memory_size = layer_sizes.pop(-1)  # make not-static later
     dummy_hidden = jnp.zeros(1, memory_size)
@@ -192,7 +195,7 @@ def make_models(policy_params_size: int,
   pol_layer_sizes = [pol_num_neurons_per_layer] * pol_num_hidden_layers + [policy_params_size]
   val_layer_sizes = [val_num_neurons_per_layer] * val_num_hidden_layers + [1]
 
-  policy_model = make_model(pol_layer_sizes, obs_size, recurrent)
+  policy_model = make_model(pol_layer_sizes, obs_size, recurrent=recurrent)
   value_model = make_model(val_layer_sizes, obs_size) # stick to default for now
   
   return policy_model, value_model
