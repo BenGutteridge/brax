@@ -155,9 +155,8 @@ def make_model(layer_sizes: Sequence[int],
       assert False
     else:
       print('Using recurrent policy.')
-      input('Continue?')
       memory_size = layer_sizes.pop(-1)  # make not-static later
-      dummy_hidden = jnp.zeros((1, memory_size_)
+      dummy_hidden = jnp.zeros((1, memory_size))
       module = GRU_MLP(layer_sizes, activation=activation)
       model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),
                               apply=module.apply)
