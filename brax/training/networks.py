@@ -74,6 +74,7 @@ class MLP(linen.Module):
           use_bias=self.bias)(
               hidden)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
+        print('hidden: ', hidden)
         hidden = self.activation(hidden)
     return hidden
 
@@ -122,6 +123,8 @@ def make_model(layer_sizes: Sequence[int],
   dummy_obs = jnp.zeros((1, obs_size))
   assert not (spectral_norm and recurrent) # not supported
   if recurrent:
+    print('Using recurrent policy')
+    input('Continue?')
     memory_size = layer_sizes.pop(-1)  # make not-static later
     dummy_hidden = jnp.zeros(1, memory_size)
     module = GRU_MLP(layer_sizes, activation)
