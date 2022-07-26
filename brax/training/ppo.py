@@ -103,6 +103,7 @@ class StepData:
   truncation: jnp.ndarray
   actions: jnp.ndarray
   logits: jnp.ndarray
+  hidden_state: jnp.ndarray
 
 
 @flax.struct.dataclass
@@ -212,6 +213,7 @@ def train(
     pol_num_neurons_per_layer=32,
     val_num_hidden_layers=5,
     val_num_neurons_per_layer = 256,
+    recurrent=False, ################## BEN ADDITION ######################
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -265,7 +267,7 @@ def train(
       pol_num_neurons_per_layer=pol_num_neurons_per_layer,
       val_num_hidden_layers=val_num_hidden_layers,
       val_num_neurons_per_layer=val_num_neurons_per_layer,
-      recurrent = True, ################## BEN ADDITION ######################
+      recurrent=recurrent, ################## BEN ADDITION ######################
       )
   key_policy, key_value = jax.random.split(key_models)
 
@@ -322,27 +324,31 @@ def train(
     4. Output step data, resulting state
     (this is repeated unroll_length times) 
     """
-    state, normalizer_params, policy_params, key = carry
+    state, normalizer_params, policy_params, key, hidden_state = carry
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
-    logits = policy_model.apply(policy_params, normalized_obs)
+    # need to pass in hidden state
+    logits, hidden_state = policy_model.apply(policy_params, normalized_obs, hidden_state)
     actions = parametric_action_distribution.sample_no_postprocessing(
         logits, key_sample)
     postprocessed_actions = parametric_action_distribution.postprocess(actions)
     nstate = step_fn(state, postprocessed_actions)
-    return (nstate, normalizer_params, policy_params, key), StepData(
+    return (nstate, normalizer_params, policy_params, key, hidden_state), StepData(
         obs=state.obs,
         rewards=state.reward,
         dones=state.done,
         truncation=state.info['truncation'],
         actions=actions,
-        logits=logits)
+        logits=logits,
+        hidden_state=hidden_state)
 
   def generate_unroll(carry, unused_target_t):
     """ generate data by performing `unroll_length` steps"""
     state, normalizer_params, policy_params, key = carry
-    (state, _, _, key), data = jax.lax.scan(
-        do_one_step, (state, normalizer_params, policy_params, key), (),
+    # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
+    hidden_state = jnp.zeros(core_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
+    (state, _, _, key, hidden_state), data = jax.lax.scan(
+        do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
         length=unroll_length)
     data = data.replace(
         obs=jnp.concatenate(
@@ -540,14 +546,14 @@ def train(
   logging.info('total steps: %s', normalizer_params[0] * action_repeat)
 
   inference = make_inference_fn(core_env.observation_size, core_env.action_size,
-                                normalize_observations)
+                                normalize_observations, recurrent=recurrent)
   params = normalizer_params, policy_params
 
   pmap.synchronize_hosts()
   return (inference, params, metrics) # policy, policy params, saved training data
 
 
-def make_inference_fn(observation_size, action_size, normalize_observations, **layers):
+def make_inference_fn(observation_size, action_size, normalize_observations, recurrent=False, **layers):
   """Creates params and inference function for the PPO agent."""
   _, obs_normalizer_apply_fn = normalization.make_data_and_apply_fn(
       observation_size, normalize_observations)
@@ -561,21 +567,29 @@ def make_inference_fn(observation_size, action_size, normalize_observations, **l
         pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
         val_num_hidden_layers=layers["val_num_hidden_layers"],
         val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
-        recurrent = True, ################## BEN ADDITION ######################
+        recurrent=recurrent, ################## BEN ADDITION ######################
         )
   else:
     policy_model, _ = networks.make_models(
         parametric_action_distribution.param_size, 
         observation_size,
-        recurrent = True, ################## BEN ADDITION ######################
+        recurrent=recurrent, ################## BEN ADDITION ######################
         )
 
 
-  def inference_fn(params, obs, key):
-    normalizer_params, policy_params = params
-    obs = obs_normalizer_apply_fn(normalizer_params, obs)
-    action = parametric_action_distribution.sample(
-        policy_model.apply(policy_params, obs), key)
-    return action
+  if not recurrent: 
+    def inference_fn(params, obs, key):
+      normalizer_params, policy_params = params
+      obs = obs_normalizer_apply_fn(normalizer_params, obs)
+      action = parametric_action_distribution.sample(
+          policy_model.apply(policy_params, obs), key)
+      return action
+  else: ################## BEN ADDITION ######################
+    def inference_fn(params, obs, hidden, key):
+      normalizer_params, policy_params = params
+      obs = obs_normalizer_apply_fn(normalizer_params, obs)
+      action = parametric_action_distribution.sample(
+          policy_model.apply(policy_params, obs, hidden), key)
+      return action
 
   return inference_fn
