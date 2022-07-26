@@ -157,7 +157,7 @@ def make_model(layer_sizes: Sequence[int],
       print('Using recurrent policy.')
       memory_size = layer_sizes.pop(-1)  # make not-static later
       dummy_hidden = jnp.zeros((1, memory_size))
-      print('dummy_hidden: ', dummy_hidden.shape)
+      print('dummy_hidden: (used to defined the model)', dummy_hidden.shape)
       module = GRU_MLP(layer_sizes, activation=activation)
       model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),
                               apply=module.apply)
