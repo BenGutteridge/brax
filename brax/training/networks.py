@@ -146,9 +146,6 @@ def make_model(layer_sizes: Sequence[int],
   """
   dummy_obs = jnp.zeros((1, obs_size))
   assert not (spectral_norm and recurrent) # not supported
-  print('activation: ', activation)
-  print('Recurrent? ', recurrent)
-
   if recurrent:
     if recurrent == 'lstm':
       print('LSTM not defined yet.')
