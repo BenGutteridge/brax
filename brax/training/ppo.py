@@ -297,12 +297,12 @@ def train(
   grad_loss = jax.grad(loss_fn, has_aux=True)
 
   def do_one_step_eval(carry, unused_target_t):
-    state, policy_params, normalizer_params, key = carry
+    state, policy_params, normalizer_params, key, hidden_state = carry
     key, key_sample = jax.random.split(key)
     # TODO: Make this nicer ([0] comes from pmapping).
     obs = obs_normalizer_apply_fn(
         jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
-    logits = policy_model.apply(policy_params, obs)
+    logits = policy_model.apply(policy_params, obs, hidden_state)
     actions = parametric_action_distribution.sample(logits, key_sample)
     nstate = eval_step_fn(state, actions)
     return (nstate, policy_params, normalizer_params, key), ()
@@ -311,8 +311,10 @@ def train(
   def run_eval(state, key, policy_params,
                normalizer_params) -> Tuple[envs.State, PRNGKey]:
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
+    # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
+    hidden_state = jnp.zeros(eval_env.action_size) # Initialising to zero: GRU output (action) = hidden state 
     (state, _, _, key), _ = jax.lax.scan(
-        do_one_step_eval, (state, policy_params, normalizer_params, key), (),
+        do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
         length=episode_length // action_repeat)
     return state, key
 
