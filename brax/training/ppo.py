@@ -353,7 +353,6 @@ def train(
     state, normalizer_params, policy_params, key = carry
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     hidden_state = jnp.zeros((num_core_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
-    print('hidden_state (core): ', hidden_state.shape)
     (state, _, _, key, hidden_state), data = jax.lax.scan(
         do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
         length=unroll_length)
@@ -373,7 +372,6 @@ def train(
     """Optimises the loss function - called once per minibatch"""
     optimizer_state, params, key = carry
     key, key_loss = jax.random.split(key)
-    print('Before calling grad loss, data: ', jax.tree_map(lambda x : x.shape, data))
     loss_grad, metrics = grad_loss(params, data, key_loss)
     loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
 
