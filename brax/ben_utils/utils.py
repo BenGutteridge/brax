@@ -182,7 +182,7 @@ def visualize_trajectory(jits,
   state = jit_env_reset(rng=rng)
   if recurrent:
     len_hidden = 16
-    last_layer = sorted(params['policy']['params'].keys())[-1][-1]
+    last_layer = sorted(params[0]['policy']['params'].keys())[-1][-1]
     assert len_hidden == params['policy']['params']['hidden_%d'%last_layer]['kernel'].shape[-1]
     hidden_state = jnp.zeros((1,len_hidden)) # hard coded - naughty
   for _ in range(len_traj):
