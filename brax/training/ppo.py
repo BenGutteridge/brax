@@ -317,7 +317,7 @@ def train(
     # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
     hidden_state = jnp.zeros((num_eval_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
     print('hidden_state (eval): ', hidden_state.shape)
-    (state, _, _, key), _ = jax.lax.scan(
+    (state, _, _, key, _), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
         length=episode_length // action_repeat)
     return state, key
