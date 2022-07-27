@@ -129,7 +129,8 @@ def compute_ppo_loss(
     ppo_epsilon: float = 0.3):
   """Computes PPO loss."""
   policy_params, value_params = models['policy'], models['value']
-  policy_logits = policy_apply(policy_params, data.obs[:-1])
+  policy_logits = policy_apply(policy_params, data.obs[:-1], 
+                                              data.hidden_state[:-1]) # BEN ADDITION
   baseline = value_apply(value_params, data.obs)
   baseline = jnp.squeeze(baseline, axis=-1)
 
