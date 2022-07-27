@@ -313,7 +313,7 @@ def train(
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
-    hidden_state = jnp.zeros(parametric_action_distribution.param_size) # Initialising to zero: GRU output (action) = hidden state 
+    hidden_state = jnp.zeros((num_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
     print('hidden_state (eval): ', hidden_state.shape)
     (state, _, _, key), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
@@ -350,7 +350,7 @@ def train(
     """ generate data by performing `unroll_length` steps"""
     state, normalizer_params, policy_params, key = carry
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-    hidden_state = jnp.zeros(parametric_action_distribution.param_size) # Initialising to zero: GRU output (action) = hidden state 
+    hidden_state = jnp.zeros((num_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
     print('hidden_state (core): ', hidden_state.shape)
     (state, _, _, key, hidden_state), data = jax.lax.scan(
         do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
@@ -479,7 +479,6 @@ def train(
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
     t = time.time()
-    print('eval_first_state: ', jax.tree_map(lambda x: x.shape, eval_first_state))
     if process_id == 0: # pretty much always runs
       eval_state, key_debug = (
           run_eval(eval_first_state, key_debug,
