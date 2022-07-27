@@ -479,7 +479,7 @@ def train(
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
     t = time.time()
-
+    print('eval_first_state: ', eval_first_state)
     if process_id == 0: # pretty much always runs
       eval_state, key_debug = (
           run_eval(eval_first_state, key_debug,
