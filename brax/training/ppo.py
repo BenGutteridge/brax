@@ -130,7 +130,7 @@ def compute_ppo_loss(
   """Computes PPO loss."""
   policy_params, value_params = models['policy'], models['value']
   policy_logits = policy_apply(policy_params, data.obs[:-1], 
-                                              data.hidden_state[:-1]) # BEN ADDITION
+                                              data.hidden_state) # [:-1] - doesn't work, first dimension is 1 short # BEN ADDITION
   baseline = value_apply(value_params, data.obs)
   baseline = jnp.squeeze(baseline, axis=-1)
 
@@ -242,7 +242,6 @@ def train(
   # for different processes
 
   num_core_envs = num_envs // local_devices_to_use // process_count # analagous to num_eval_envs
-  print('num_core_envs = num_envs // local_devices_to_use // process_count: ', num_core_envs)
   core_env = environment_fn(
       action_repeat=action_repeat,
       batch_size=num_core_envs,
@@ -317,7 +316,6 @@ def train(
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
     hidden_state = jnp.zeros((num_eval_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
-    print('hidden_state (eval): ', hidden_state.shape)
     (state, _, _, key, _), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
         length=episode_length // action_repeat)
@@ -374,6 +372,7 @@ def train(
     """Optimises the loss function - called once per minibatch"""
     optimizer_state, params, key = carry
     key, key_loss = jax.random.split(key)
+    print('Before calling grad loss, data: ', jax.tree_map(lambda x : x.shape, data))
     loss_grad, metrics = grad_loss(params, data, key_loss)
     loss_grad = jax.lax.pmean(loss_grad, axis_name='i')
 
