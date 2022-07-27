@@ -595,8 +595,8 @@ def make_inference_fn(observation_size, action_size, normalize_observations, rec
     def inference_fn(params, obs, hidden, key):
       normalizer_params, policy_params = params
       obs = obs_normalizer_apply_fn(normalizer_params, obs)
-      action = parametric_action_distribution.sample(
-          policy_model.apply(policy_params, obs, hidden), key)
-      return action
+      logits, hidden = policy_model.apply(policy_params, obs, hidden)
+      action = parametric_action_distribution.sample(logits, key)
+      return action, hidden
 
   return inference_fn
