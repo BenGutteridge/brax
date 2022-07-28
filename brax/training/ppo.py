@@ -133,7 +133,7 @@ def compute_ppo_loss(
   policy_params, value_params = models['policy'], models['value']
   _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
                                               data.hidden_state[:-1]) # BEN ADDITION
-  print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
+  # print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
   _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
   # print('baseline: ', baseline, baseline.shape)
   baseline = jnp.squeeze(baseline, axis=-1)
