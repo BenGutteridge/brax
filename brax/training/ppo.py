@@ -278,6 +278,7 @@ def train(
   init_params = {'policy': policy_model.init(key_policy),
                  'value': value_model.init(key_value)}
   print("Checking if GRU params are updating:\ninit_params['policy']:\n", init_params['policy'])
+  input('Copy before continuing, console abt to be cleared. ')
   
   optimizer_state = optimizer.init(init_params)
   optimizer_state, init_params = pmap.bcast_local_devices(
