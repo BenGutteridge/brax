@@ -49,7 +49,7 @@ class GRU_MLP(linen.Module):
     """
     output = input
     penultimate = len(self.layer_sizes) - 2
-    for i, layer_size in enumerate(self.layer_sizes[:-1]):
+    for i, layer_size in enumerate(self.layer_sizes):
       output = linen.Dense(
           layer_size,
           name=f'fc_{i}',
