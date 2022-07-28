@@ -41,17 +41,23 @@ class GRU_MLP(linen.Module):
 
   @linen.compact
   def __call__(self, input: jnp.ndarray, hidden: jnp.ndarray):
+    """
+    Penultimate layer is a GRU cell with fixed sized memory.
+    Its output goes through a final FC layer to ensure correct sized NN output
+    Its hidden state is passed to the next timestep (to be an input to the GRU cell)
+    """
     output = input
-    for i, layer_size in enumerate(self.layer_sizes):
+    penultimate = len(self.layer_sizes) - 2
+    for i, layer_size in enumerate(self.layer_sizes[:-1]):
       output = linen.Dense(
           layer_size,
           name=f'fc_{i}',
           kernel_init=self.kernel_init,
           use_bias=self.bias)(output)
+      if i == penultimate:
+        hidden, output = linen.GRUCell(name='gru_layer')(hidden, output)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
-    # # do recurrent
-    hidden, output = linen.GRUCell(name='gru_layer')(hidden, output)
     return hidden, output
 
 
@@ -152,7 +158,7 @@ def make_model(layer_sizes: Sequence[int],
       assert False
     else:
       print('Using recurrent policy.')
-      memory_size = layer_sizes.pop(-1)  # make not-static later
+      memory_size = 32 # static
       dummy_hidden = jnp.zeros((1, memory_size))
       module = GRU_MLP(layer_sizes, activation=activation)
       model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),

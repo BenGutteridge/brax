@@ -130,12 +130,12 @@ def compute_ppo_loss(
   """Computes PPO loss."""
   # N.B. each hidden state corresponds to the *input* to the GRUMLP along with obs, not the output. obs[-1] is the final obs after the last step in the rollout, and hidden_state[-1] is the hidden state after that last step. We use it for an uncounted 'extra' step
   policy_params, value_params = models['policy'], models['value']
-  _, policy_logits = policy_apply(policy_params, data.obs[:-1], 
+  print('data, tree_map: ', jax.tree_map(lambda x: x.shape, data))
+  _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
                                               data.hidden_state[:-1]) # BEN ADDITION
-  # TODO: figure out why obs, rewards, dones, truncation are length 6 and actions, logits, hidden are length 5
   print("data.obs.shape: ", data.obs.shape)
   print("data.hidden_state.shape: ", data.hidden_state.shape)
-  baseline = value_apply(value_params, data.obs, data.hidden_state)
+  _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
   baseline = jnp.squeeze(baseline, axis=-1)
 
   # Use last baseline value (from the value function) to bootstrap.
@@ -309,7 +309,7 @@ def train(
     # TODO: Make this nicer ([0] comes from pmapping).
     obs = obs_normalizer_apply_fn(
         jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
-    logits, hidden_state = policy_model.apply(policy_params, obs, hidden_state)
+    hidden_state, logits = policy_model.apply(policy_params, obs, hidden_state)
     actions = parametric_action_distribution.sample(logits, key_sample)
     nstate = eval_step_fn(state, actions)
     return (nstate, policy_params, normalizer_params, key, hidden_state), ()
@@ -338,7 +338,7 @@ def train(
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
     # need to pass in hidden state
-    logits, new_hidden_state = policy_model.apply(policy_params, normalized_obs, hidden_state)
+    new_hidden_state, logits = policy_model.apply(policy_params, normalized_obs, hidden_state)
     actions = parametric_action_distribution.sample_no_postprocessing(
         logits, key_sample)
     postprocessed_actions = parametric_action_distribution.postprocess(actions)
@@ -599,7 +599,7 @@ def make_inference_fn(observation_size, action_size, normalize_observations, rec
     def inference_fn(params, obs, hidden, key):
       normalizer_params, policy_params = params
       obs = obs_normalizer_apply_fn(normalizer_params, obs)
-      logits, hidden = policy_model.apply(policy_params, obs, hidden)
+      hidden, logits = policy_model.apply(policy_params, obs, hidden)
       action = parametric_action_distribution.sample(logits, key)
       return action, hidden
 
