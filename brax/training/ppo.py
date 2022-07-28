@@ -137,6 +137,7 @@ def compute_ppo_loss(
   print("data.obs.shape: ", data.obs.shape)
   print("data.hidden_state.shape: ", data.hidden_state.shape)
   _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
+  print('baseline: ', baseline, baseline.shape)
   baseline = jnp.squeeze(baseline, axis=-1)
 
   # Use last baseline value (from the value function) to bootstrap.
