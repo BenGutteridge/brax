@@ -128,11 +128,12 @@ def compute_ppo_loss(
     lambda_: float = 0.95,
     ppo_epsilon: float = 0.3):
   """Computes PPO loss."""
+  # N.B. each hidden state corresponds to the *input* to the GRUMLP along with obs, not the output. obs[-1] is the final obs after the last step in the rollout, and hidden_state[-1] is the hidden state after that last step. We use it for an uncounted 'extra' step
   policy_params, value_params = models['policy'], models['value']
   _, policy_logits = policy_apply(policy_params, data.obs[:-1], 
-                                              data.hidden_state) # [:-1] - doesn't work, first dimension is 1 short # BEN ADDITION
+                                              data.hidden_state[:-1]) # BEN ADDITION
   # TODO: figure out why obs, rewards, dones, truncation are length 6 and actions, logits, hidden are length 5
-  baseline = value_apply(value_params, data.obs)
+  baseline = value_apply(value_params, data.obs, data.hidden_state)
   baseline = jnp.squeeze(baseline, axis=-1)
 
   # Use last baseline value (from the value function) to bootstrap.
@@ -335,12 +336,12 @@ def train(
     key, key_sample = jax.random.split(key)
     normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
     # need to pass in hidden state
-    logits, hidden_state = policy_model.apply(policy_params, normalized_obs, hidden_state)
+    logits, new_hidden_state = policy_model.apply(policy_params, normalized_obs, hidden_state)
     actions = parametric_action_distribution.sample_no_postprocessing(
         logits, key_sample)
     postprocessed_actions = parametric_action_distribution.postprocess(actions)
     nstate = step_fn(state, postprocessed_actions)
-    return (nstate, normalizer_params, policy_params, key, hidden_state), StepData(
+    return (nstate, normalizer_params, policy_params, key, new_hidden_state), StepData(
         obs=state.obs,
         rewards=state.reward,
         dones=state.done,
@@ -365,8 +366,10 @@ def train(
         dones=jnp.concatenate(
             [data.dones, jnp.expand_dims(state.done, axis=0)]),
         truncation=jnp.concatenate(
-            [data.truncation, jnp.expand_dims(state.info['truncation'],
-                                              axis=0)]))
+            [data.truncation, jnp.expand_dims(state.info['truncation'], axis=0)]), 
+        hidden_state=jnp.concatenate(
+            [data.hidden_state, jnp.expand_dims(hidden_state, axis=0)]), 
+        )
     return (state, normalizer_params, policy_params, key), data
 
   def update_model(carry, data):
