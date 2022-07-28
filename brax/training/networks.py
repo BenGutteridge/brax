@@ -137,6 +137,7 @@ def make_model(layer_sizes: Sequence[int],
                activation: Callable[[jnp.ndarray], jnp.ndarray] = linen.swish,
                spectral_norm: bool = False,
                recurrent: bool = False,
+               memory_size = 50 # for recurrent model
                ) -> FeedForwardModel:
   """Creates a model.
 
@@ -158,7 +159,6 @@ def make_model(layer_sizes: Sequence[int],
       assert False
     else:
       print('Using recurrent policy.')
-      memory_size = 32 # static
       dummy_hidden = jnp.zeros((1, memory_size))
       module = GRU_MLP(layer_sizes, activation=activation)
       model = FeedForwardModel(init=lambda rng: module.init(rng, dummy_obs, dummy_hidden),

@@ -27,6 +27,7 @@ from brax import envs
 from brax.io import model
 from brax.training import distribution
 from brax.training import networks
+from brax.training.networks import default_recurrent_memory_size
 from brax.training import normalization
 from brax.training import pmap
 from brax.training.types import Params
@@ -219,6 +220,7 @@ def train(
     val_num_hidden_layers=5,
     val_num_neurons_per_layer = 256,
     recurrent=False, ################## BEN ADDITION ######################
+    recurrent_memory_size=default_recurrent_memory_size,
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -274,6 +276,7 @@ def train(
       val_num_hidden_layers=val_num_hidden_layers,
       val_num_neurons_per_layer=val_num_neurons_per_layer,
       recurrent=recurrent, ################## BEN ADDITION ######################
+      memory_size=recurrent_memory_size,
       )
   key_policy, key_value = jax.random.split(key_models)
 
@@ -320,7 +323,7 @@ def train(
     policy_params = jax.tree_map(lambda x: x[0], policy_params)
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
     # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
-    hidden_state = jnp.zeros((num_eval_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
+    hidden_state = jnp.zeros((num_eval_envs, recurrent_memory_size)) # Initialising to zero: GRU output (action) = hidden state 
     (state, _, _, key, _), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
         length=episode_length // action_repeat)
@@ -356,7 +359,7 @@ def train(
     """ generate data by performing `unroll_length` steps"""
     state, normalizer_params, policy_params, key = carry
     # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-    hidden_state = jnp.zeros((num_core_envs, parametric_action_distribution.param_size)) # Initialising to zero: GRU output (action) = hidden state 
+    hidden_state = jnp.zeros((num_core_envs, recurrent_memory_size)) # Initialising to zero: GRU output (action) = hidden state 
     (state, _, _, key, hidden_state), data = jax.lax.scan(
         do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
         length=unroll_length)
