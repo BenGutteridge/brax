@@ -195,6 +195,6 @@ def make_models(policy_params_size: int,
   val_layer_sizes = [val_num_neurons_per_layer] * val_num_hidden_layers + [1]
 
   policy_model = make_model(pol_layer_sizes, obs_size, recurrent=recurrent)
-  value_model = make_model(val_layer_sizes, obs_size) # stick to default for now
-  
+  value_model = make_model(val_layer_sizes, obs_size, recurrent=recurrent) 
+
   return policy_model, value_model
