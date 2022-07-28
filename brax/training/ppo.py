@@ -131,14 +131,11 @@ def compute_ppo_loss(
   """Computes PPO loss."""
   # N.B. each hidden state corresponds to the *input* to the GRUMLP along with obs, not the output. obs[-1] is the final obs after the last step in the rollout, and hidden_state[-1] is the hidden state after that last step. We use it for an uncounted 'extra' step
   policy_params, value_params = models['policy'], models['value']
-  print('data, tree_map: ', jax.tree_map(lambda x: x.shape, data))
   _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
                                               data.hidden_state[:-1]) # BEN ADDITION
-  print("data.obs.shape: ", data.obs.shape)
-  print("data.hidden_state.shape: ", data.hidden_state.shape)
   print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
   _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
-  print('baseline: ', baseline, baseline.shape)
+  # print('baseline: ', baseline, baseline.shape)
   baseline = jnp.squeeze(baseline, axis=-1)
 
   # Use last baseline value (from the value function) to bootstrap.
