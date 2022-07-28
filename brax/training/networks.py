@@ -184,7 +184,6 @@ def make_models(policy_params_size: int,
                 val_num_hidden_layers=5,
                 val_num_neurons_per_layer = 256,
                 recurrent=False,
-                memory_size=default_recurrent_memory_size,
                 ) -> Tuple[FeedForwardModel, FeedForwardModel]:
   """Creates models for policy and value functions.
 
