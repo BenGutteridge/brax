@@ -136,6 +136,7 @@ def compute_ppo_loss(
                                               data.hidden_state[:-1]) # BEN ADDITION
   print("data.obs.shape: ", data.obs.shape)
   print("data.hidden_state.shape: ", data.hidden_state.shape)
+  print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
   _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
   print('baseline: ', baseline, baseline.shape)
   baseline = jnp.squeeze(baseline, axis=-1)
