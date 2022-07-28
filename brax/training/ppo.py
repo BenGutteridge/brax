@@ -133,6 +133,8 @@ def compute_ppo_loss(
   _, policy_logits = policy_apply(policy_params, data.obs[:-1], 
                                               data.hidden_state[:-1]) # BEN ADDITION
   # TODO: figure out why obs, rewards, dones, truncation are length 6 and actions, logits, hidden are length 5
+  print("data.obs.shape: ", data.obs.shape)
+  print("data.hidden_state.shape: ", data.hidden_state.shape)
   baseline = value_apply(value_params, data.obs, data.hidden_state)
   baseline = jnp.squeeze(baseline, axis=-1)
 
