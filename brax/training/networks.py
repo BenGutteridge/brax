@@ -24,6 +24,7 @@ import jax.numpy as jnp
 
 from brax.training.spectral_norm import SNDense
 
+default_recurrent_memory_size = 50
 
 @dataclasses.dataclass
 class FeedForwardModel:
@@ -137,7 +138,7 @@ def make_model(layer_sizes: Sequence[int],
                activation: Callable[[jnp.ndarray], jnp.ndarray] = linen.swish,
                spectral_norm: bool = False,
                recurrent: bool = False,
-               memory_size = 50 # for recurrent model
+               memory_size = default_recurrent_memory_size # for recurrent model
                ) -> FeedForwardModel:
   """Creates a model.
 
@@ -183,6 +184,7 @@ def make_models(policy_params_size: int,
                 val_num_hidden_layers=5,
                 val_num_neurons_per_layer = 256,
                 recurrent=False,
+                memory_size=default_recurrent_memory_size,
                 ) -> Tuple[FeedForwardModel, FeedForwardModel]:
   """Creates models for policy and value functions.
 
