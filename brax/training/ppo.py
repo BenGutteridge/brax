@@ -27,7 +27,7 @@ from brax import envs
 from brax.io import model
 from brax.training import distribution
 from brax.training import networks
-from brax.training.networks import default_recurrent_memory_size as memory_size
+from brax.training.networks import default_recurrent_memory_size as recurrent_memory_size
 from brax.training import normalization
 from brax.training import pmap
 from brax.training.types import Params
