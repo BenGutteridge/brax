@@ -27,7 +27,7 @@ from brax import envs
 from brax.io import model
 from brax.training import distribution
 from brax.training import networks
-from brax.training.networks import default_recurrent_memory_size
+from brax.training.networks import default_recurrent_memory_size as memory_size
 from brax.training import normalization
 from brax.training import pmap
 from brax.training.types import Params
@@ -220,7 +220,6 @@ def train(
     val_num_hidden_layers=5,
     val_num_neurons_per_layer = 256,
     recurrent=False, ################## BEN ADDITION ######################
-    recurrent_memory_size=default_recurrent_memory_size,
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
