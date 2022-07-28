@@ -189,8 +189,6 @@ def visualize_trajectory(jits,
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
     act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
-    print('Before jit_env_step in vis traj:\nact: ', act)
-    print('hidden_state: ', hidden_state)
     state = jit_env_step(state, act)
     if state.done: # end traj if traj ends
       print('Termination condition reached')
