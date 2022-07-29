@@ -194,7 +194,7 @@ def visualize_trajectory(jits,
 
     print("state.obs, hidden_state:\n", state.obs, state.obs.shape, '\n', hidden_state, hidden_state.shape)
 
-    hidden_state, act = jit_inference_fn(params, state.obs, hidden_state, act_rng)
+    act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
     state = jit_env_step(state, act)
     if state.done: # end traj if traj ends
       print('Termination condition reached')
