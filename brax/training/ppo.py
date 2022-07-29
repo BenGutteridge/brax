@@ -130,17 +130,32 @@ def compute_ppo_loss(
     ppo_epsilon: float = 0.3):
   """Computes PPO loss."""
   # N.B. each hidden state corresponds to the *input* to the GRUMLP along with obs, not the output. obs[-1] is the final obs after the last step in the rollout, and hidden_state[-1] is the hidden state after that last step. We use it for an uncounted 'extra' step
-  policy_params, value_params = models['policy'], models['value']
-  _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
-                                              data.hidden_state[:-1]) # BEN ADDITION
-  # print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
-  _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
-  # print('baseline: ', baseline, baseline.shape)
-  baseline = jnp.squeeze(baseline, axis=-1)
+  
+  ################################################################
+  try: # THE VERSION WHERE VALUE FUNC IS RECURRENT  
+    policy_params, value_params = models['policy'], models['value']
+    _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
+                                                data.hidden_state[:-1]) # BEN ADDITION
+    # print('value_params: ', jax.tree_map(lambda x: x.shape, value_params))
+    _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
+    # print('baseline: ', baseline, baseline.shape)
+    baseline = jnp.squeeze(baseline, axis=-1)
 
-  # Use last baseline value (from the value function) to bootstrap.
-  bootstrap_value = baseline[-1]
-  baseline = baseline[:-1]
+    # Use last baseline value (from the value function) to bootstrap.
+    bootstrap_value = baseline[-1]
+    baseline = baseline[:-1]
+##################################################################  
+  except:
+    print('Value function non-recurrent, reverting to pure MLP.')
+    policy_params, value_params = models['policy'], models['value']
+    policy_logits = policy_apply(policy_params, data.obs[:-1])
+    baseline = value_apply(value_params, data.obs)
+    baseline = jnp.squeeze(baseline, axis=-1)
+
+    # Use last baseline value (from the value function) to bootstrap.
+    bootstrap_value = baseline[-1]
+    baseline = baseline[:-1]
+##################################################################
 
   # At this point, we have unroll length + 1 steps. The last step is only used
   # as bootstrap value, so it's removed.
