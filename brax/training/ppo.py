@@ -148,7 +148,8 @@ def compute_ppo_loss(
   except:
     print('Value function non-recurrent, reverting to pure MLP.')
     policy_params, value_params = models['policy'], models['value']
-    policy_logits = policy_apply(policy_params, data.obs[:-1])
+    _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
+                                                data.hidden_state[:-1]) # BEN ADDITION
     baseline = value_apply(value_params, data.obs)
     baseline = jnp.squeeze(baseline, axis=-1)
 
