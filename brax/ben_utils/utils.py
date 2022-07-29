@@ -9,6 +9,8 @@ import os
 from os.path import join
 from brax.io import model, html
 from collections import OrderedDict as odict
+from brax.training.networks import default_recurrent_memory_size as recurrent_memory_size
+
 
 def make_group_action_shapes(players, actions_per_player):
   group_action_shapes, count = {}, 0
@@ -181,7 +183,7 @@ def visualize_trajectory(jits,
   rng = jax.random.PRNGKey(seed=seed)
   state = jit_env_reset(rng=rng)
   if recurrent:
-    len_hidden = 16 # TODO: make not hard coded, add in assertion to check it
+    len_hidden = recurrent_memory_size # TODO: make not hard coded, add in assertion to check it
     # last_layer = sorted(params[0]['policy']['params'].keys())[-1][-1]
     # assert len_hidden == params['policy']['params']['hidden_%d'%last_layer]['kernel'].shape[-1]
     hidden_state = jnp.zeros(len_hidden) # hard coded - naughty
