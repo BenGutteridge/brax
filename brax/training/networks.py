@@ -56,6 +56,7 @@ class GRU_MLP(linen.Module):
           kernel_init=self.kernel_init,
           use_bias=self.bias)(output)
       if i == penultimate:
+        output = linen.LayerNorm()(output) # normalising inputs so we don't saturate tanh in GRU cell
         hidden, output = linen.GRUCell(name='gru_layer')(hidden, output)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
