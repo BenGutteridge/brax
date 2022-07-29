@@ -133,6 +133,7 @@ def compute_ppo_loss(
   
   ################################################################
   try: # THE VERSION WHERE VALUE FUNC IS RECURRENT  
+    print('Value function is recurrent.')
     policy_params, value_params = models['policy'], models['value']
     _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
                                                 data.hidden_state[:-1]) # BEN ADDITION
@@ -556,6 +557,7 @@ def train(
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
+    print('training_state:\n', jax.tree_map(lambda x: x.shape, training_state))
     (training_state,
      state), losses, synchro = minimize_loop(training_state, state) # ACTUALLY DOES THE TRAINING
     assert synchro[0], (it, training_state)
