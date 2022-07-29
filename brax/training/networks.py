@@ -71,7 +71,7 @@ class LSTM_MLP(linen.Module):
   bias: bool = True
 
   @linen.compact
-  def __call__(self, input: jnp.ndarray, carry: tuple[jnp.ndarray, jnp.ndarray]):
+  def __call__(self, input: jnp.ndarray, carry: Tuple[jnp.ndarray, jnp.ndarray]):
     """
     Penultimate layer is a GRU cell with fixed sized memory.
     Its output goes through a final FC layer to ensure correct sized NN output
