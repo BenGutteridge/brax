@@ -557,7 +557,6 @@ def train(
     t = time.time()
     previous_step = training_state.normalizer_params[0][0]
     # optimization
-    print('training_state:\n', jax.tree_map(lambda x: x.shape, training_state))
     (training_state,
      state), losses, synchro = minimize_loop(training_state, state) # ACTUALLY DOES THE TRAINING
     assert synchro[0], (it, training_state)
