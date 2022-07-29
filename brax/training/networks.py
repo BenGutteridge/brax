@@ -24,7 +24,7 @@ import jax.numpy as jnp
 
 from brax.training.spectral_norm import SNDense
 
-default_recurrent_memory_size = 50
+default_recurrent_memory_size = 20
 
 @dataclasses.dataclass
 class FeedForwardModel:
@@ -63,7 +63,7 @@ class GRU_MLP(linen.Module):
 
 
 class LSTM_MLP(linen.Module):
-  """Standard MLP module with LSTM layer inplace of final fully-connected layer."""
+  """Standard MLP module with GRU layer inplace of final fully-connected layer."""
   layer_sizes: Sequence[int]
   activation: Callable[[jnp.ndarray], jnp.ndarray] = linen.relu
   kernel_init: Callable[..., Any] = jax.nn.initializers.lecun_uniform()
@@ -71,20 +71,26 @@ class LSTM_MLP(linen.Module):
   bias: bool = True
 
   @linen.compact
-  def __call__(self, input: jnp.ndarray, carry: jnp.ndarray):
-    cell, hidden = carry
+  def __call__(self, input: jnp.ndarray, carry: tuple(jnp.ndarray, jnp.ndarray)):
+    """
+    Penultimate layer is a GRU cell with fixed sized memory.
+    Its output goes through a final FC layer to ensure correct sized NN output
+    Its hidden state is passed to the next timestep (to be an input to the GRU cell)
+    """
     output = input
+    cell, hidden = carry
+    penultimate = len(self.layer_sizes) - 2
     for i, layer_size in enumerate(self.layer_sizes):
       output = linen.Dense(
           layer_size,
           name=f'fc_{i}',
           kernel_init=self.kernel_init,
           use_bias=self.bias)(output)
+      if i == penultimate:
+        (cell, hidden), output = linen.LSTMCell(name='lstm_layer')((cell, hidden), output)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
-    # # do recurrent
-    (cell, hidden), output = linen.LSTMCell(name='lstm_layer')((cell, hidden), output)
-    return (cell, hidden), output
+    return hidden, output
 
 
 class MLP(linen.Module):
