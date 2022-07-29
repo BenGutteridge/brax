@@ -571,6 +571,8 @@ def train(
                                    training_state.normalizer_params)
   policy_params = jax.tree_map(lambda x: x[0],
                                training_state.params['policy'])
+  value_params = jax.tree_map(lambda x: x[0],
+                               training_state.params['value'])
 
   logging.info('total steps: %s', normalizer_params[0] * action_repeat)
 
@@ -579,7 +581,7 @@ def train(
   params = normalizer_params, policy_params
 
   pmap.synchronize_hosts()
-  return (inference, params, metrics) # policy, policy params, saved training data
+  return (inference, params, metrics, value_params) # policy, policy params, saved training data
 
 
 def make_inference_fn(observation_size, action_size, normalize_observations, recurrent=False, **layers):
