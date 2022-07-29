@@ -190,10 +190,6 @@ def visualize_trajectory(jits,
   for _ in range(len_traj):
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
-    print('params: \n', jax.tree_map(lambda x: x.shape, params))
-
-    print("state.obs, hidden_state:\n", state.obs, state.obs.shape, '\n', hidden_state, hidden_state.shape)
-
     act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
     state = jit_env_step(state, act)
     if state.done: # end traj if traj ends
