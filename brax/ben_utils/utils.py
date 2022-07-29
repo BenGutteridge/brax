@@ -192,7 +192,7 @@ def visualize_trajectory(jits,
     act_rng, rng = jax.random.split(rng)
     print('params: \n', jax.tree_map(lambda x: x.shape, params))
 
-    print("state.obs, hidden_state:\n", state.obs, state.obs.shape'\n', hidden_state, hidden_state.shape)
+    print("state.obs, hidden_state:\n", state.obs, state.obs.shape, '\n', hidden_state, hidden_state.shape)
 
     hidden_state, act = jit_inference_fn(params, state.obs, hidden_state, act_rng)
     state = jit_env_step(state, act)
