@@ -29,8 +29,8 @@ class AntFetch(env.Env):
 
   def __init__(self, legacy_spring=False, **kwargs):
     config = _SYSTEM_CONFIG
-    super().__init__(config=config, **kwargs)
     is_multiagent = False if kwargs.pop('is_not_multiagent', False) else True
+    super().__init__(config=config, **kwargs)
     if is_multiagent:
       self.n_agents, self.actuators_per_agent = 2, 4
       players = ['agent_%d' % i for i in range(self.n_agents)]
