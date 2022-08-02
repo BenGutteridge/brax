@@ -59,7 +59,7 @@ class GRU_MLP(linen.Module):
         # output = linen.LayerNorm()(output) # normalising inputs so we don't saturate tanh in GRU cell
         hidden, output = linen.GRUCell(
                                       #  gate_fn=linen.relu, 
-                                      #  activation_fn=linen.relu, 
+                                       activation_fn=linen.swish, 
                                        name='gru_layer')(hidden, output)
       if i != len(self.layer_sizes) - 1 or self.activate_final:
         output = self.activation(output)
