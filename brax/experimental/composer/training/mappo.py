@@ -74,6 +74,7 @@ def compute_ppo_loss(
     data: StepData,
     udata: StepData,
     rng: PRNGKey,
+    hidden_state: jnp.ndarray,
     parametric_action_distribution: distribution.ParametricDistribution,
     policy_apply: Any,
     value_apply: Any,
@@ -96,8 +97,8 @@ def compute_ppo_loss(
   if recurrent:
     print('Value function is recurrent.')
     _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
-                                                data.hidden_state[:-1])
-    _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
+                                                hidden_state[:-1])
+    _, baseline = value_apply(value_params, data.obs, hidden_state) # output is (hidden, output) tuple
   else:
     print('Value function non-recurrent, reverting to pure MLP.')
     policy_logits = policy_apply(policy_params, data.obs[:-1])
@@ -502,7 +503,7 @@ def train(environment_fn: Callable[..., envs.Env],
     metrics = []
     for i, agent in enumerate(agents.values()):
       loss_grad, agent_metrics = agent.grad_loss(params[i], data, udata,
-                                                 key_loss)
+                                                 key_loss, data.hidden_states[i])
       metrics.append(agent_metrics)
       loss_grad = jax.lax.pmean(loss_grad, axis_name='i') # pmean - mean across devices. 'i' is a unique identifier but with no special meaning.
       params_update, optimizer_state[i] = optimizer.update(
