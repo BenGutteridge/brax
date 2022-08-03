@@ -189,7 +189,7 @@ def visualize_trajectory(jits,
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
     if recurrent:
-      print('hidden_state: ',hidden_state, jax.tree_utils.tree_map(lambda x: x.shape, hidden_state))
+      print('hidden_state: ',hidden_state, jax.tree_util.tree_map(lambda x: x.shape, hidden_state))
       act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
     if not recurrent:
       act = jit_inference_fn(params, state.obs, act_rng)
