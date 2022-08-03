@@ -164,7 +164,7 @@ def train(
   def clip_by_global_norm(updates):
     g_norm = optax.global_norm(updates)
     trigger = g_norm < max_gradient_norm
-    updates = jax.tree_multimap(
+    updates = jax.tree_util.tree_multimap(
         lambda t: jnp.where(trigger, t, (t / g_norm) * max_gradient_norm),
         updates)
     return updates

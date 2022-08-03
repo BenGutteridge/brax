@@ -260,7 +260,7 @@ def train(environment_fn: Callable[..., envs.Env],
     first_state, step_fn = env.wrap(
         core_env, key, extra_step_kwargs=extra_step_kwargs)
     tmp_env_states.append(first_state)
-  first_state = jax.tree_multimap(lambda *args: jnp.stack(args),
+  first_state = jax.tree_util.tree_multimap(lambda *args: jnp.stack(args),
                                   *tmp_env_states)
 
   normalizer_params, obs_normalizer_update_fn, obs_normalizer_apply_fn = (
@@ -404,9 +404,9 @@ def train(environment_fn: Callable[..., envs.Env],
               data.truncation,
               jnp.expand_dims(state.core.info['truncation'], axis=0)]),
           # WILL PROBABLY FAIL - hidden_states is a list
-          hidden_states=jnp.concatenate([
-              data.hidden_states,
-              jnp.expand_dims(hidden_states, axis=0)]),
+          hidden_states=[jnp.concatenate([
+              data.hidden_states[i],
+              jnp.expand_dims(hidden_states[i], axis=0)]) for i in range(len(hidden_states))],
       )
       return (state, normalizer_params, policy_params, extra_params, key, counter), data
 

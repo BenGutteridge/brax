@@ -160,12 +160,12 @@ def train(
     num_vars = len(jax.tree_leaves(params))
     treedef = jax.tree_structure(params)
     all_keys = jax.random.split(key, num=num_vars)
-    noise = jax.tree_multimap(
+    noise = jax.tree_util.tree_multimap(
         lambda g, k: jax.random.normal(k, shape=g.shape, dtype=g.dtype), params,
         jax.tree_unflatten(treedef, all_keys))
-    params_with_noise = jax.tree_multimap(lambda g, n: g + n * perturbation_std,
+    params_with_noise = jax.tree_util.tree_multimap(lambda g, n: g + n * perturbation_std,
                                           params, noise)
-    anit_params_with_noise = jax.tree_multimap(
+    anit_params_with_noise = jax.tree_util.tree_multimap(
         lambda g, n: g - n * perturbation_std, params, noise)
     return params_with_noise, anit_params_with_noise, noise
 
@@ -180,7 +180,7 @@ def train(
     params_with_noise, params_with_anti_noise, noise = add_noise(
         params, key_petr)
 
-    pparams = jax.tree_multimap(lambda a, b: jnp.concatenate([a, b], axis=0),
+    pparams = jax.tree_util.tree_multimap(lambda a, b: jnp.concatenate([a, b], axis=0),
                                 params_with_noise, params_with_anti_noise)
 
     pparams = jax.tree_util.tree_map(
@@ -228,7 +228,7 @@ def train(
 
     # NOTE: a paper does "len(weights) -> len(weights) * perturbation_std,
     # but it's just a matter of a different tuning for l2_coef
-    delta = jax.tree_multimap(
+    delta = jax.tree_util.tree_multimap(
         lambda y: 1. /
         (len(weights)) * jnp.sum(
             y * jnp.reshape(weights, ([weights.shape[0]] + [1] *
@@ -237,7 +237,7 @@ def train(
     # l2coeff controls the weight decay of the parameters of our policy network.
     # This prevents the parameters from growing very large compared to the
     # perturbations.
-    delta = jax.tree_multimap(lambda d, th: d - l2coeff * th, delta,
+    delta = jax.tree_util.tree_multimap(lambda d, th: d - l2coeff * th, delta,
                               training_state.policy_params)
     delta = jax.tree_util.tree_map(lambda x: -x, delta)
 

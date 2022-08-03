@@ -365,7 +365,7 @@ def train(
     alpha_params_update, alpha_optimizer_state = alpha_optimizer.update(
         alpha_grads, state.alpha_optimizer_state)
     alpha_params = optax.apply_updates(state.alpha_params, alpha_params_update)
-    new_target_q_params = jax.tree_multimap(
+    new_target_q_params = jax.tree_util.tree_multimap(
         lambda x, y: x * (1 - tau) + y * tau, state.target_q_params, q_params)
 
     metrics = {
@@ -422,7 +422,7 @@ def train(
 
   def collect_and_update_buffer(training_state, state, replay_buffer):
     training_state, state, newdata = collect_data(training_state, state)
-    new_replay_data = jax.tree_multimap(
+    new_replay_data = jax.tree_util.tree_multimap(
         lambda x, y: jax.lax.dynamic_update_slice_in_dim(
             x,
             y,
