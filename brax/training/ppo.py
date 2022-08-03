@@ -423,7 +423,9 @@ def train(
           dones=state.done,
           truncation=state.info['truncation'],
           actions=actions,
-          logits=logits)
+          logits=logits,
+          hidden_state=jnp.zeros(1), # dummy - not used
+          )
 
     def generate_unroll(carry, unused_target_t):
       """ generate data by performing `unroll_length` steps"""
