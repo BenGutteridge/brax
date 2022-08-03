@@ -67,7 +67,7 @@ def vmap(fun: F, include: Optional[Sequence[bool]] = None) -> F:
     batch_size = None
     for a, inc in zip(args, include):
       if inc:
-        flat_args, _ = jax.tree_flatten(a)
+        flat_args, _ = jax.tree_util.tree_flatten(a)
         batch_size = flat_args[0].shape[0]
         break
 
@@ -102,7 +102,7 @@ def scan(f: Callable[[Carry, X], Tuple[Carry, Y]],
   if _in_jit():
     return jax.lax.scan(f, init, xs, length, reverse, unroll)
   else:
-    xs_flat, xs_tree = jax.tree_flatten(xs)
+    xs_flat, xs_tree = jax.tree_util.tree_flatten(xs)
     carry = init
     ys = []
     maybe_reversed = reversed if reverse else lambda x: x
