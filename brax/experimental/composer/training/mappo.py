@@ -20,7 +20,7 @@
 from collections import OrderedDict as odict
 import functools
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, List
 from brax.ben_utils.utils import get_total_count
 
 from absl import logging
@@ -50,7 +50,7 @@ class StepData:
   truncation: jnp.ndarray
   actions: jnp.ndarray
   logits: jnp.ndarray
-  hidden_states: list[jnp.ndarray] # leave as zeros if never used
+  hidden_states: List[jnp.ndarray] # leave as zeros if never used
 
 @flax.struct.dataclass
 class TrainingState:
