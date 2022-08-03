@@ -337,7 +337,7 @@ def train(environment_fn: Callable[..., envs.Env],
       normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.core.obs)
       new_hidden_states, logits, actions, postprocessed_actions = [], [], [], odict()
       for i, (k, agent) in enumerate(agents.items()):
-        new_hidden_state, logits_i += agent.policy_model.apply(policy_params[i], 
+        new_hidden_state, logits_i = agent.policy_model.apply(policy_params[i], 
                                                                normalized_obs, 
                                                                hidden_states[i])
         new_hidden_states.append(new_hidden_state)
