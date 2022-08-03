@@ -356,8 +356,12 @@ def train(environment_fn: Callable[..., envs.Env],
       nstate = step_fn(state, postprocessed_actions, normalizer_params,
                       extra_params)
 
-      counter = counter.at[state.core.info['agent_idx']].add(1) # BEN
-
+      try:
+        counter = counter.at[state.core.info['agent_idx']].add(1) # BEN
+      except:
+        print('Non-BR - no counter')
+        pass
+      
       return (nstate, normalizer_params, policy_params, extra_params, key, 
               counter,            # BEN
               new_hidden_states,  # BEN
