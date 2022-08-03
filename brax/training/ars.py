@@ -137,7 +137,7 @@ def train(
 
   @jax.jit
   def run_eval(state, policy_params, normalizer_params) -> envs.State:
-    normalizer_params = jax.tree_map(lambda x: x[0], normalizer_params)
+    normalizer_params = jax.tree_util.tree_map(lambda x: x[0], normalizer_params)
     (state, _, _), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params), (),
         length=episode_length // action_repeat)
@@ -190,7 +190,7 @@ def train(
     pparams = jnp.concatenate([params_with_noise, params_with_anti_noise],
                               axis=0)
 
-    pparams = jax.tree_map(
+    pparams = jax.tree_util.tree_map(
         lambda x: jnp.reshape(x, [local_devices_to_use, -1] + list(x.shape[1:])
                              ), pparams)
 
@@ -292,7 +292,7 @@ def train(
     # episode length we still want to start from a 'reset', not from where the
     # last run finished.
 
-    jax.tree_map(lambda x: x.block_until_ready(), training_state)
+    jax.tree_util.tree_map(lambda x: x.block_until_ready(), training_state)
     sps = (int(training_state.normalizer_params[0][0]) * action_repeat -
            num_process_env_steps) / (
                time.time() - t)
@@ -300,7 +300,7 @@ def train(
 
   inference = make_inference_fn(core_env.observation_size, core_env.action_size,
                                 normalize_observations, head_type)
-  normalizer_params = jax.tree_map(lambda x: x[0],
+  normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
                                    training_state.normalizer_params)
   params = normalizer_params, training_state.policy_params
 

@@ -123,9 +123,9 @@ class EvalWrapper(brax_env.Wrapper):
     reset_state = self.env.reset(rng)
     reset_state.metrics['reward'] = reset_state.reward
     eval_metrics = EvalMetrics(
-        current_episode_metrics=jax.tree_map(jp.zeros_like,
+        current_episode_metrics=jax.tree_util.tree_map(jp.zeros_like,
                                              reset_state.metrics),
-        completed_episodes_metrics=jax.tree_map(
+        completed_episodes_metrics=jax.tree_util.tree_map(
             lambda x: jp.zeros_like(jp.sum(x)), reset_state.metrics),
         completed_episodes=jp.zeros(()),
         completed_episodes_steps=jp.zeros(()))

@@ -253,7 +253,7 @@ def train(
   @jax.jit
   def run_eval(state, key, policy_params,
                normalizer_params) -> Tuple[envs.State, PRNGKey]:
-    policy_params, normalizer_params = jax.tree_map(
+    policy_params, normalizer_params = jax.tree_util.tree_map(
         lambda x: x[0], (policy_params, normalizer_params))
     (state, _, _, key), _ = jax.lax.scan(
         do_one_step_eval, (state, policy_params, normalizer_params, key), (),
@@ -484,7 +484,7 @@ def train(
     (training_state, state, replay_buffer), metrics = jax.lax.scan(
         run_one_sac_epoch, (training_state, state, replay_buffer), (),
         length=(log_frequency // action_repeat + num_envs - 1) // num_envs)
-    metrics = jax.tree_map(jnp.mean, metrics)
+    metrics = jax.tree_util.tree_map(jnp.mean, metrics)
     return training_state, state, replay_buffer, metrics, synchro
 
   run_sac_training = jax.pmap(run_sac_training, axis_name='i')
@@ -553,9 +553,9 @@ def train(
 
       if checkpoint_dir:
         # Save current policy.
-        normalizer_params = jax.tree_map(lambda x: x[0],
+        normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
                                          training_state.normalizer_params)
-        policy_params = jax.tree_map(lambda x: x[0],
+        policy_params = jax.tree_util.tree_map(lambda x: x[0],
                                      training_state.policy_params)
         params = normalizer_params, policy_params
         path = os.path.join(checkpoint_dir, f'sac_{current_step}.pkl')
@@ -583,14 +583,14 @@ def train(
     training_state, state, replay_buffer, training_metrics, synchro = run_sac_training(
         training_state, state, replay_buffer)
     assert synchro[0], (current_step, training_state)
-    jax.tree_map(lambda x: x.block_until_ready(), training_metrics)
+    jax.tree_util.tree_map(lambda x: x.block_until_ready(), training_metrics)
     sps = ((training_state.normalizer_params[0][0] * action_repeat -
             current_step) / (time.time() - t))
     training_walltime += time.time() - t
 
-  normalizer_params = jax.tree_map(lambda x: x[0],
+  normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
                                    training_state.normalizer_params)
-  policy_params = jax.tree_map(lambda x: x[0], training_state.policy_params)
+  policy_params = jax.tree_util.tree_map(lambda x: x[0], training_state.policy_params)
 
   logging.info('total steps: %s', normalizer_params[0] * action_repeat)
 

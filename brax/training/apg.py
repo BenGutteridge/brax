@@ -119,9 +119,9 @@ def train(
     key, key_sample = jax.random.split(key)
     # TODO: Make this nicer ([0] comes from pmapping).
     obs = obs_normalizer_apply_fn(
-        jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
+        jax.tree_util.tree_map(lambda x: x[0], normalizer_params), state.obs)
     print(obs.shape)
-    print(jax.tree_map(lambda x: x.shape, params))
+    print(jax.tree_util.tree_map(lambda x: x.shape, params))
     logits = policy_model.apply(params, obs)
     actions = parametric_action_distribution.sample(logits, key_sample)
     nstate = eval_step_fn(state, actions)
@@ -130,7 +130,7 @@ def train(
   @jax.jit
   def run_eval(params, state, normalizer_params,
                key) -> Tuple[envs.State, PRNGKey]:
-    params = jax.tree_map(lambda x: x[0], params)
+    params = jax.tree_util.tree_map(lambda x: x[0], params)
     (state, _, _, key), _ = jax.lax.scan(
         do_one_step_eval, (state, params, normalizer_params, key), (),
         length=episode_length // action_repeat)
@@ -203,7 +203,7 @@ def train(
   eval_sps = 0
   summary = {
       'params_norm':
-          optax.global_norm(jax.tree_map(lambda x: x[0], policy_params))
+          optax.global_norm(jax.tree_util.tree_map(lambda x: x[0], policy_params))
   }
   key = jnp.stack(jax.random.split(key, local_devices_to_use))
   training_state = TrainingState(key=key,
@@ -255,12 +255,12 @@ def train(
     # optimization
     training_state, summary, synchro = minimize(training_state, first_state)
     assert synchro[0], (it, training_state)
-    jax.tree_map(lambda x: x.block_until_ready(), summary)
+    jax.tree_util.tree_map(lambda x: x.block_until_ready(), summary)
     sps = (episode_length * num_envs) / (time.time() - t)
     training_walltime += time.time() - t
 
-  params = jax.tree_map(lambda x: x[0], training_state.policy_params)
-  normalizer_params = jax.tree_map(lambda x: x[0],
+  params = jax.tree_util.tree_map(lambda x: x[0], training_state.policy_params)
+  normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
                                    training_state.normalizer_params)
   params = normalizer_params, params
   inference = make_inference_fn(core_env.observation_size, core_env.action_size,

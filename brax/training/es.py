@@ -171,7 +171,7 @@ def train(
 
   @jax.jit
   def es_one_epoch(state: envs.State, training_state: TrainingState):
-    params = jax.tree_map(
+    params = jax.tree_util.tree_map(
         lambda x: jnp.repeat(jnp.expand_dims(x, axis=0),
                              population_size, axis=0),
         training_state.policy_params)
@@ -183,7 +183,7 @@ def train(
     pparams = jax.tree_multimap(lambda a, b: jnp.concatenate([a, b], axis=0),
                                 params_with_noise, params_with_anti_noise)
 
-    pparams = jax.tree_map(
+    pparams = jax.tree_util.tree_map(
         lambda x: jnp.reshape(x, [local_devices_to_use, -1] + list(x.shape[1:])
                              ), pparams)
 
@@ -239,7 +239,7 @@ def train(
     # perturbations.
     delta = jax.tree_multimap(lambda d, th: d - l2coeff * th, delta,
                               training_state.policy_params)
-    delta = jax.tree_map(lambda x: -x, delta)
+    delta = jax.tree_util.tree_map(lambda x: -x, delta)
 
     params_update, optimizer_state = optimizer.update(
         delta, training_state.optimizer_state)
@@ -325,7 +325,7 @@ def train(
     # Don't override state with new state. For environments with variable
     # episode length we still want to start from a 'reset', not from where the
     # last run finished.
-    jax.tree_map(lambda x: x.block_until_ready(), training_state)
+    jax.tree_util.tree_map(lambda x: x.block_until_ready(), training_state)
     sps = (int(training_state.normalizer_params[0]) * action_repeat -
            num_process_env_steps) / (
                time.time() - t)

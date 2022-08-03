@@ -184,13 +184,14 @@ def visualize_trajectory(jits,
   state = jit_env_reset(rng=rng)
   if recurrent:
     len_hidden = recurrent_memory_size # TODO: make not hard coded, add in assertion to check it
-    # last_layer = sorted(params[0]['policy']['params'].keys())[-1][-1]
-    # assert len_hidden == params['policy']['params']['hidden_%d'%last_layer]['kernel'].shape[-1]
     hidden_state = jnp.zeros(len_hidden) # hard coded - naughty
   for _ in range(len_traj):
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
-    act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
+    if recurrent:
+      act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
+    if not recurrent:
+      act = jit_inference_fn(params, state.obs, act_rng)
     state = jit_env_step(state, act)
     if state.done: # end traj if traj ends
       print('Termination condition reached')

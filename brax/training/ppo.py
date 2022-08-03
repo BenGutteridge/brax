@@ -314,7 +314,7 @@ def train(
       key, key_sample = jax.random.split(key)
       # TODO: Make this nicer ([0] comes from pmapping).
       obs = obs_normalizer_apply_fn(
-          jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
+          jax.tree_util.tree_map(lambda x: x[0], normalizer_params), state.obs)
       hidden_state, logits = policy_model.apply(policy_params, obs, hidden_state)
       actions = parametric_action_distribution.sample(logits, key_sample)
       nstate = eval_step_fn(state, actions)
@@ -323,7 +323,7 @@ def train(
     @jax.jit
     def run_eval(state, key, policy_params,
                 normalizer_params) -> Tuple[envs.State, PRNGKey]:
-      policy_params = jax.tree_map(lambda x: x[0], policy_params)
+      policy_params = jax.tree_util.tree_map(lambda x: x[0], policy_params)
       # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
       # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
       hidden_state = jnp.zeros((num_eval_envs, recurrent_memory_size)) # Initialising to zero: GRU output (action) = hidden state 
@@ -386,7 +386,7 @@ def train(
       key, key_sample = jax.random.split(key)
       # TODO: Make this nicer ([0] comes from pmapping).
       obs = obs_normalizer_apply_fn(
-          jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
+          jax.tree_util.tree_map(lambda x: x[0], normalizer_params), state.obs)
       logits = policy_model.apply(policy_params, obs)
       actions = parametric_action_distribution.sample(logits, key_sample)
       nstate = eval_step_fn(state, actions)
@@ -395,7 +395,7 @@ def train(
     @jax.jit
     def run_eval(state, key, policy_params,
                 normalizer_params) -> Tuple[envs.State, PRNGKey]:
-      policy_params = jax.tree_map(lambda x: x[0], policy_params)
+      policy_params = jax.tree_util.tree_map(lambda x: x[0], policy_params)
       (state, _, _, key), _ = jax.lax.scan(
           do_one_step_eval, (state, policy_params, normalizer_params, key), (),
           length=episode_length // action_repeat)
@@ -476,7 +476,7 @@ def train(
           data, [data.shape[0], num_minibatches, -1] + list(data.shape[2:]))
       data = jnp.swapaxes(data, 0, 1)
       return data
-    ndata = jax.tree_map(lambda x: convert_data(x, permutation), data)
+    ndata = jax.tree_util.tree_map(lambda x: convert_data(x, permutation), data)
     (optimizer_state, params, _), metrics = jax.lax.scan(
         update_model, (optimizer_state, params, key_grad),
         ndata,
@@ -499,8 +499,8 @@ def train(
                           key_generate_unroll), (),
         length=batch_size * num_minibatches // num_envs)
     # make unroll first
-    data = jax.tree_map(lambda x: jnp.swapaxes(x, 0, 1), data)
-    data = jax.tree_map(
+    data = jax.tree_util.tree_map(lambda x: jnp.swapaxes(x, 0, 1), data)
+    data = jax.tree_util.tree_map(
         lambda x: jnp.reshape(x, [x.shape[0], -1] + list(x.shape[3:])), data)
 
     # Update normalization params and normalize observations.
@@ -537,7 +537,7 @@ def train(
     (training_state, state), losses = jax.lax.scan(
         run_epoch, (training_state, state), (),
         length=num_epochs // log_frequency)
-    losses = jax.tree_map(jnp.mean, losses)
+    losses = jax.tree_util.tree_map(jnp.mean, losses)
     return (training_state, state), losses, synchro
 
   ### DEFINING FUNC -- NOT WHERE THE TRAINING ACTUALLY HAPPENS
@@ -594,15 +594,15 @@ def train(
       logging.info(metrics)
       current_step = int(training_state.normalizer_params[0][0]) * action_repeat
       if progress_fn:
-        normalizer_params = jax.tree_map(lambda x: x[0], training_state.normalizer_params)
-        policy_params = jax.tree_map(lambda x: x[0], training_state.params['policy'])
+        normalizer_params = jax.tree_util.tree_map(lambda x: x[0], training_state.normalizer_params)
+        policy_params = jax.tree_util.tree_map(lambda x: x[0], training_state.params['policy'])
         params = normalizer_params, policy_params
         progress_fn(current_step, metrics, params)
 
       if checkpoint_dir:
-        # normalizer_params = jax.tree_map(lambda x: x[0],
+        # normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
         #                                  training_state.normalizer_params)
-        # policy_params = jax.tree_map(lambda x: x[0],
+        # policy_params = jax.tree_util.tree_map(lambda x: x[0],
         #                              training_state.params['policy'])
         # params = normalizer_params, policy_params
         path = os.path.join(checkpoint_dir, f'ppo_{current_step}.pkl')
@@ -617,17 +617,17 @@ def train(
     (training_state,
      state), losses, synchro = minimize_loop(training_state, state) # ACTUALLY DOES THE TRAINING
     assert synchro[0], (it, training_state)
-    jax.tree_map(lambda x: x.block_until_ready(), losses)
+    jax.tree_util.tree_map(lambda x: x.block_until_ready(), losses)
     sps = ((training_state.normalizer_params[0][0] - previous_step) /
            (time.time() - t)) * action_repeat
     training_walltime += time.time() - t
 
   # To undo the pmap.
-  normalizer_params = jax.tree_map(lambda x: x[0],
+  normalizer_params = jax.tree_util.tree_map(lambda x: x[0],
                                    training_state.normalizer_params)
-  policy_params = jax.tree_map(lambda x: x[0],
+  policy_params = jax.tree_util.tree_map(lambda x: x[0],
                                training_state.params['policy'])
-  # value_params = jax.tree_map(lambda x: x[0],
+  # value_params = jax.tree_util.tree_map(lambda x: x[0],
   #                              training_state.params['value']) # BEN ADDITION
 
   logging.info('total steps: %s', normalizer_params[0] * action_repeat)

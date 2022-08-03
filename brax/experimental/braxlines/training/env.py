@@ -49,7 +49,7 @@ def wrap(core_env: envs.Env,
       'score', jnp.zeros_like(first_core.reward))
   first_core.metrics.update(
       {f'score/{k}': v for k, v in first_core.info.get('scores', {}).items()})
-  first_total_metrics = jax.tree_map(jnp.sum, first_core.metrics)
+  first_total_metrics = jax.tree_util.tree_map(jnp.sum, first_core.metrics)
   first_total_episodes = jnp.zeros(())
 
   first_state = EnvState(
