@@ -27,7 +27,6 @@ from brax import envs
 from brax.io import model
 from brax.training import distribution
 from brax.training import networks
-from brax.training.networks import default_recurrent_memory_size as recurrent_memory_size
 from brax.training import normalization
 from brax.training import pmap
 from brax.training.types import Params
@@ -104,7 +103,6 @@ class StepData:
   truncation: jnp.ndarray
   actions: jnp.ndarray
   logits: jnp.ndarray
-  hidden_state: jnp.ndarray # leave as zeros if never used
 
 
 @flax.struct.dataclass
@@ -127,21 +125,13 @@ def compute_ppo_loss(
     discounting: float = 0.9,
     reward_scaling: float = 1.0,
     lambda_: float = 0.95,
-    ppo_epsilon: float = 0.3,
-    recurrent=False):
+    ppo_epsilon: float = 0.3):
   """Computes PPO loss."""
   policy_params, value_params = models['policy'], models['value']
-  if recurrent:
-    print('Value function is recurrent.')
-    _, policy_logits = policy_apply(policy_params, data.obs[:-1],  # output is (hidden, output) tuple
-                                                data.hidden_state[:-1])
-    _, baseline = value_apply(value_params, data.obs, data.hidden_state) # output is (hidden, output) tuple
-  else:
-    print('Value function non-recurrent, reverting to pure MLP.')
-    policy_logits = policy_apply(policy_params, data.obs[:-1])
-    baseline = value_apply(value_params, data.obs)
-
+  policy_logits = policy_apply(policy_params, data.obs[:-1])
+  baseline = value_apply(value_params, data.obs)
   baseline = jnp.squeeze(baseline, axis=-1)
+
   # Use last baseline value (from the value function) to bootstrap.
   bootstrap_value = baseline[-1]
   baseline = baseline[:-1]
@@ -222,7 +212,6 @@ def train(
     pol_num_neurons_per_layer=32,
     val_num_hidden_layers=5,
     val_num_neurons_per_layer = 256,
-    recurrent=False, ################## BEN ADDITION ######################
 ):
   """PPO training."""
   assert batch_size * num_minibatches % num_envs == 0
@@ -249,10 +238,9 @@ def train(
   # key_models should be the same, so that models are initialized the same way
   # for different processes
 
-  num_core_envs = num_envs // local_devices_to_use // process_count # analagous to num_eval_envs
   core_env = environment_fn(
       action_repeat=action_repeat,
-      batch_size=num_core_envs,
+      batch_size=num_envs // local_devices_to_use // process_count,
       episode_length=episode_length)
   key_envs = jax.random.split(key_env, local_devices_to_use)
   step_fn = jax.jit(core_env.step)
@@ -277,14 +265,12 @@ def train(
       pol_num_neurons_per_layer=pol_num_neurons_per_layer,
       val_num_hidden_layers=val_num_hidden_layers,
       val_num_neurons_per_layer=val_num_neurons_per_layer,
-      recurrent=recurrent,
       )
   key_policy, key_value = jax.random.split(key_models)
 
   optimizer = optax.adam(learning_rate=learning_rate)
   init_params = {'policy': policy_model.init(key_policy),
                  'value': value_model.init(key_value)}
-  
   optimizer_state = optimizer.init(init_params)
   optimizer_state, init_params = pmap.bcast_local_devices(
       (optimizer_state, init_params), local_devices_to_use)
@@ -303,148 +289,71 @@ def train(
       value_apply=value_model.apply,
       entropy_cost=entropy_cost,
       discounting=discounting,
-      reward_scaling=reward_scaling,
-      recurrent=recurrent) # fn returns total_loss
+      reward_scaling=reward_scaling) # fn returns total_loss
 
   grad_loss = jax.grad(loss_fn, has_aux=True)
 
-  if recurrent:
-    def do_one_step_eval(carry, unused_target_t):
-      state, policy_params, normalizer_params, key, hidden_state = carry
-      key, key_sample = jax.random.split(key)
-      # TODO: Make this nicer ([0] comes from pmapping).
-      obs = obs_normalizer_apply_fn(
-          jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
-      hidden_state, logits = policy_model.apply(policy_params, obs, hidden_state)
-      actions = parametric_action_distribution.sample(logits, key_sample)
-      nstate = eval_step_fn(state, actions)
-      return (nstate, policy_params, normalizer_params, key, hidden_state), ()
+  def do_one_step_eval(carry, unused_target_t):
+    state, policy_params, normalizer_params, key = carry
+    key, key_sample = jax.random.split(key)
+    # TODO: Make this nicer ([0] comes from pmapping).
+    obs = obs_normalizer_apply_fn(
+        jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
+    logits = policy_model.apply(policy_params, obs)
+    actions = parametric_action_distribution.sample(logits, key_sample)
+    nstate = eval_step_fn(state, actions)
+    return (nstate, policy_params, normalizer_params, key), ()
 
-    @jax.jit
-    def run_eval(state, key, policy_params,
-                normalizer_params) -> Tuple[envs.State, PRNGKey]:
-      policy_params = jax.tree_map(lambda x: x[0], policy_params)
-      # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-      # N.B. policy does not produce actions, it produces a normal distribution from which actions are sampled - therefore output twice as many output logits as actions (mu, sigma)
-      hidden_state = jnp.zeros((num_eval_envs, recurrent_memory_size)) # Initialising to zero: GRU output (action) = hidden state 
-      (state, _, _, key, _), _ = jax.lax.scan(
-          do_one_step_eval, (state, policy_params, normalizer_params, key, hidden_state), (),
-          length=episode_length // action_repeat)
-      return state, key
+  @jax.jit
+  def run_eval(state, key, policy_params,
+               normalizer_params) -> Tuple[envs.State, PRNGKey]:
+    policy_params = jax.tree_map(lambda x: x[0], policy_params)
+    (state, _, _, key), _ = jax.lax.scan(
+        do_one_step_eval, (state, policy_params, normalizer_params, key), (),
+        length=episode_length // action_repeat)
+    return state, key
 
-    def do_one_step(carry, unused_target_t):
-      """
-      1. Get state, policy function
-      2. Sample action
-      3. Apply action, perform step
-      4. Output step data, resulting state
-      (this is repeated unroll_length times) 
-      """
-      state, normalizer_params, policy_params, key, hidden_state = carry
-      key, key_sample = jax.random.split(key)
-      normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
-      # need to pass in hidden state
-      new_hidden_state, logits = policy_model.apply(policy_params, normalized_obs, hidden_state)
-      actions = parametric_action_distribution.sample_no_postprocessing(
-          logits, key_sample)
-      postprocessed_actions = parametric_action_distribution.postprocess(actions)
-      nstate = step_fn(state, postprocessed_actions)
-      return (nstate, normalizer_params, policy_params, key, new_hidden_state), StepData(
-          obs=state.obs,
-          rewards=state.reward,
-          dones=state.done,
-          truncation=state.info['truncation'],
-          actions=actions,
-          logits=logits,
-          hidden_state=hidden_state)
+  def do_one_step(carry, unused_target_t):
+    """
+    1. Get state, policy function
+    2. Sample action
+    3. Apply action, perform step
+    4. Output step data, resulting state
+    (this is repeated unroll_length times) 
+    """
+    state, normalizer_params, policy_params, key = carry
+    key, key_sample = jax.random.split(key)
+    normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
+    logits = policy_model.apply(policy_params, normalized_obs)
+    actions = parametric_action_distribution.sample_no_postprocessing(
+        logits, key_sample)
+    postprocessed_actions = parametric_action_distribution.postprocess(actions)
+    nstate = step_fn(state, postprocessed_actions)
+    return (nstate, normalizer_params, policy_params, key), StepData(
+        obs=state.obs,
+        rewards=state.reward,
+        dones=state.done,
+        truncation=state.info['truncation'],
+        actions=actions,
+        logits=logits)
 
-    def generate_unroll(carry, unused_target_t):
-      """ generate data by performing `unroll_length` steps"""
-      state, normalizer_params, policy_params, key = carry
-      # TODO: CAN YOU INITIALISE HIDDEN STATE FROM END OF PREVIOUS UNROLL?
-      hidden_state = jnp.zeros((num_core_envs, recurrent_memory_size)) # Initialising to zero: GRU output (action) = hidden state 
-      (state, _, _, key, hidden_state), data = jax.lax.scan(
-          do_one_step, (state, normalizer_params, policy_params, key, hidden_state), (),
-          length=unroll_length)
-      data = data.replace(
-          obs=jnp.concatenate(
-              [data.obs, jnp.expand_dims(state.obs, axis=0)]),
-          rewards=jnp.concatenate(
-              [data.rewards, jnp.expand_dims(state.reward, axis=0)]),
-          dones=jnp.concatenate(
-              [data.dones, jnp.expand_dims(state.done, axis=0)]),
-          truncation=jnp.concatenate(
-              [data.truncation, jnp.expand_dims(state.info['truncation'], axis=0)]), 
-          hidden_state=jnp.concatenate(
-              [data.hidden_state, jnp.expand_dims(hidden_state, axis=0)]), 
-          )
-      return (state, normalizer_params, policy_params, key), data
-
-  elif not recurrent:
-    def do_one_step_eval(carry, unused_target_t):
-      state, policy_params, normalizer_params, key = carry
-      key, key_sample = jax.random.split(key)
-      # TODO: Make this nicer ([0] comes from pmapping).
-      obs = obs_normalizer_apply_fn(
-          jax.tree_map(lambda x: x[0], normalizer_params), state.obs)
-      logits = policy_model.apply(policy_params, obs)
-      actions = parametric_action_distribution.sample(logits, key_sample)
-      nstate = eval_step_fn(state, actions)
-      return (nstate, policy_params, normalizer_params, key), ()
-    
-    @jax.jit
-    def run_eval(state, key, policy_params,
-                normalizer_params) -> Tuple[envs.State, PRNGKey]:
-      policy_params = jax.tree_map(lambda x: x[0], policy_params)
-      (state, _, _, key), _ = jax.lax.scan(
-          do_one_step_eval, (state, policy_params, normalizer_params, key), (),
-          length=episode_length // action_repeat)
-      return state, key
-
-    def do_one_step(carry, unused_target_t):
-      """
-      1. Get state, policy function
-      2. Sample action
-      3. Apply action, perform step
-      4. Output step data, resulting state
-      (this is repeated unroll_length times) 
-      """
-      state, normalizer_params, policy_params, key = carry
-      key, key_sample = jax.random.split(key)
-      normalized_obs = obs_normalizer_apply_fn(normalizer_params, state.obs)
-      logits = policy_model.apply(policy_params, normalized_obs)
-      actions = parametric_action_distribution.sample_no_postprocessing(
-          logits, key_sample)
-      postprocessed_actions = parametric_action_distribution.postprocess(actions)
-      nstate = step_fn(state, postprocessed_actions)
-      return (nstate, normalizer_params, policy_params, key), StepData(
-          obs=state.obs,
-          rewards=state.reward,
-          dones=state.done,
-          truncation=state.info['truncation'],
-          actions=actions,
-          logits=logits)
-
-    def generate_unroll(carry, unused_target_t):
-      """ generate data by performing `unroll_length` steps"""
-      state, normalizer_params, policy_params, key = carry
-      (state, _, _, key), data = jax.lax.scan(
-          do_one_step, (state, normalizer_params, policy_params, key), (),
-          length=unroll_length)
-      data = data.replace(
-          obs=jnp.concatenate(
-              [data.obs, jnp.expand_dims(state.obs, axis=0)]),
-          rewards=jnp.concatenate(
-              [data.rewards, jnp.expand_dims(state.reward, axis=0)]),
-          dones=jnp.concatenate(
-              [data.dones, jnp.expand_dims(state.done, axis=0)]),
-          truncation=jnp.concatenate(
-              [data.truncation, jnp.expand_dims(state.info['truncation'],
-                                                axis=0)]))
-      return (state, normalizer_params, policy_params, key), data
-
-  else:
-    raise ValueError('Unknown mode - recurrent should be True or False.')
+  def generate_unroll(carry, unused_target_t):
+    """ generate data by performing `unroll_length` steps"""
+    state, normalizer_params, policy_params, key = carry
+    (state, _, _, key), data = jax.lax.scan(
+        do_one_step, (state, normalizer_params, policy_params, key), (),
+        length=unroll_length)
+    data = data.replace(
+        obs=jnp.concatenate(
+            [data.obs, jnp.expand_dims(state.obs, axis=0)]),
+        rewards=jnp.concatenate(
+            [data.rewards, jnp.expand_dims(state.reward, axis=0)]),
+        dones=jnp.concatenate(
+            [data.dones, jnp.expand_dims(state.done, axis=0)]),
+        truncation=jnp.concatenate(
+            [data.truncation, jnp.expand_dims(state.info['truncation'],
+                                              axis=0)]))
+    return (state, normalizer_params, policy_params, key), data
 
   def update_model(carry, data):
     """Optimises the loss function - called once per minibatch"""
@@ -558,6 +467,7 @@ def train(
   for it in range(log_frequency + 1):
     logging.info('starting iteration %s %s', it, time.time() - xt)
     t = time.time()
+
     if process_id == 0: # pretty much always runs
       eval_state, key_debug = (
           run_eval(eval_first_state, key_debug,
@@ -625,20 +535,18 @@ def train(
                                    training_state.normalizer_params)
   policy_params = jax.tree_map(lambda x: x[0],
                                training_state.params['policy'])
-  # value_params = jax.tree_map(lambda x: x[0],
-  #                              training_state.params['value']) # BEN ADDITION
 
   logging.info('total steps: %s', normalizer_params[0] * action_repeat)
 
   inference = make_inference_fn(core_env.observation_size, core_env.action_size,
-                                normalize_observations, recurrent=recurrent)
+                                normalize_observations)
   params = normalizer_params, policy_params
 
   pmap.synchronize_hosts()
   return (inference, params, metrics) # policy, policy params, saved training data
 
 
-def make_inference_fn(observation_size, action_size, normalize_observations, recurrent=False, **layers):
+def make_inference_fn(observation_size, action_size, normalize_observations, **layers):
   """Creates params and inference function for the PPO agent."""
   _, obs_normalizer_apply_fn = normalization.make_data_and_apply_fn(
       observation_size, normalize_observations)
@@ -652,29 +560,19 @@ def make_inference_fn(observation_size, action_size, normalize_observations, rec
         pol_num_neurons_per_layer=layers["pol_num_neurons_per_layer"],
         val_num_hidden_layers=layers["val_num_hidden_layers"],
         val_num_neurons_per_layer=layers["val_num_neurons_per_layer"],
-        recurrent=recurrent, ################## BEN ADDITION ######################
         )
   else:
     policy_model, _ = networks.make_models(
         parametric_action_distribution.param_size, 
         observation_size,
-        recurrent=recurrent, ################## BEN ADDITION ######################
         )
 
 
-  if not recurrent: 
-    def inference_fn(params, obs, key):
-      normalizer_params, policy_params = params
-      obs = obs_normalizer_apply_fn(normalizer_params, obs)
-      action = parametric_action_distribution.sample(
-          policy_model.apply(policy_params, obs), key)
-      return action
-  else: ################## BEN ADDITION ######################
-    def inference_fn(params, obs, hidden, key):
-      normalizer_params, policy_params = params
-      obs = obs_normalizer_apply_fn(normalizer_params, obs)
-      hidden, logits = policy_model.apply(policy_params, obs, hidden)
-      action = parametric_action_distribution.sample(logits, key)
-      return action, hidden
+  def inference_fn(params, obs, key):
+    normalizer_params, policy_params = params
+    obs = obs_normalizer_apply_fn(normalizer_params, obs)
+    action = parametric_action_distribution.sample(
+        policy_model.apply(policy_params, obs), key)
+    return action
 
   return inference_fn
