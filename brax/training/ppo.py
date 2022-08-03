@@ -499,7 +499,7 @@ def train(
                           key_generate_unroll), (),
         length=batch_size * num_minibatches // num_envs)
     # make unroll first
-    data = jax.tree_util.(lambda x: jnp.swapaxes(x, 0, 1), data)
+    data = jax.tree_util.tree_map(lambda x: jnp.swapaxes(x, 0, 1), data)
     data = jax.tree_util.tree_map(
         lambda x: jnp.reshape(x, [x.shape[0], -1] + list(x.shape[3:])), data)
 
