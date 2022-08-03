@@ -41,6 +41,16 @@ import optax
 import os
 from brax.training.networks import default_recurrent_memory_size as recurrent_memory_size
 
+@flax.struct.dataclass
+class StepData:
+  """Contains data for one environment step."""
+  obs: jnp.ndarray
+  rewards: jnp.ndarray
+  dones: jnp.ndarray
+  truncation: jnp.ndarray
+  actions: jnp.ndarray
+  logits: jnp.ndarray
+  hidden_states: list[jnp.ndarray] # leave as zeros if never used
 
 @flax.struct.dataclass
 class TrainingState:
@@ -61,8 +71,8 @@ class Agent:
 
 def compute_ppo_loss(
     models: Dict[str, Params],
-    data: ppo.StepData,
-    udata: ppo.StepData,
+    data: StepData,
+    udata: StepData,
     rng: PRNGKey,
     parametric_action_distribution: distribution.ParametricDistribution,
     policy_apply: Any,
@@ -73,7 +83,7 @@ def compute_ppo_loss(
     lambda_: float = 0.95,
     ppo_epsilon: float = 0.3,
     extra_loss_update_ratios: Optional[Dict[str, float]] = None,
-    extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
+    extra_loss_fns: Optional[Dict[str, Callable[[StepData],
                                                 jnp.ndarray]]] = None,
     action_shapes: Dict[str, Dict[str, Any]] = None,
     agent_name: str = None,
@@ -198,7 +208,7 @@ def train(environment_fn: Callable[..., envs.Env],
           extra_params: Optional[Dict[str, Dict[str, jnp.ndarray]]] = None,
           extra_step_kwargs: bool = False, # True originally
           extra_loss_update_ratios: Optional[Dict[str, float]] = None,
-          extra_loss_fns: Optional[Dict[str, Callable[[ppo.StepData],
+          extra_loss_fns: Optional[Dict[str, Callable[[StepData],
                                                       jnp.ndarray]]] = None,
           recurrent=False,
           ):
@@ -365,7 +375,7 @@ def train(environment_fn: Callable[..., envs.Env],
       return (nstate, normalizer_params, policy_params, extra_params, key, 
               counter,            # BEN
               new_hidden_states,  # BEN
-              ), ppo.StepData(
+              ), StepData(
                   obs=state.core.obs,
                   rewards=state.core.reward,
                   dones=state.core.done,
@@ -455,13 +465,14 @@ def train(environment_fn: Callable[..., envs.Env],
 
       return (nstate, normalizer_params, policy_params, extra_params, key, 
               counter, # BEN
-              ), ppo.StepData(
+              ), StepData(
                   obs=state.core.obs,
                   rewards=state.core.reward,
                   dones=state.core.done,
                   truncation=state.core.info['truncation'],
                   actions=actions,
                   logits=logits,
+                  hidden_states=[jnp.zeros(1)], # dummy
                   )
 
     def generate_unroll(carry, unused_target_t):
