@@ -184,12 +184,12 @@ def visualize_trajectory(jits,
   state = jit_env_reset(rng=rng)
   if recurrent:
     len_hidden = recurrent_memory_size # TODO: make not hard coded, add in assertion to check it
-    hidden_state = jnp.zeros(len_hidden) # hard coded - naughty
+    hidden_state = [jnp.zeros(len_hidden) for _ in range(len(params[-1]))] # hard coded - naughty
   for _ in range(len_traj):
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
     if recurrent:
-      print('hidden_state: ',hidden_state, jax.tree_util.tree_map(lambda x: x.shape, hidden_state))
+      print('hidden_state: ', hidden_state, jax.tree_util.tree_map(lambda x: x.shape, hidden_state))
       act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
     if not recurrent:
       act = jit_inference_fn(params, state.obs, act_rng)
