@@ -31,7 +31,7 @@ class Ant_MA(env.Env):
     print('Optimising for x direction only: ', self.xdir)
     super().__init__(config=config, **kwargs)
     if is_multiagent:
-      self.n_agents, self.actuators_per_agent = 2, 4
+      self.n_agents, self.actuators_per_agent = 1, 8
       players = ['agent_%d' % i for i in range(self.n_agents)]
       self.group_action_shapes = make_group_action_shapes(players, self.actuators_per_agent)
       self.is_multiagent = True
