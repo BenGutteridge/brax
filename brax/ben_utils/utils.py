@@ -182,7 +182,6 @@ def visualize_trajectory(jits,
   rollout = []
   rng = jax.random.PRNGKey(seed=seed)
   state = jit_env_reset(rng=rng)
-  is_MA = isinstance()
   if recurrent:
     len_hidden = recurrent_memory_size # TODO: make not hard coded, add in assertion to check it
     hidden_state = jnp.zeros(len_hidden)
