@@ -182,16 +182,21 @@ def visualize_trajectory(jits,
   rollout = []
   rng = jax.random.PRNGKey(seed=seed)
   state = jit_env_reset(rng=rng)
+  is_multiagent = False
+  try:
+    is_multiagent = env.is_multiagent
+  except:
+    pass
   if recurrent:
     len_hidden = recurrent_memory_size # TODO: make not hard coded, add in assertion to check it
     hidden_state = jnp.zeros(len_hidden)
-    if env.is_multiagent:
-      hidden_states = [hidden_state]*len(env.group_action_shapes) # only used if MA
+    if is_multiagent:
+        hidden_states = [hidden_state]*len(env.group_action_shapes) # only used if MA
   for _ in range(len_traj):
     rollout.append(state)
     act_rng, rng = jax.random.split(rng)
     if recurrent:
-      if env.is_multiagent:
+      if is_multiagent:
         act, hidden_states = jit_inference_fn(params, state.obs, hidden_states, act_rng)
       else:
         act, hidden_state = jit_inference_fn(params, state.obs, hidden_state, act_rng)
